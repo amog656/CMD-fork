@@ -1,0 +1,51 @@
+# Colab-optimized full-atom config for DiffPhar
+run_name: 'crossdocked_full_cond_colab'
+logdir: '/content/drive/MyDrive/DiffPhar_results/logdir/'
+wandb_params:
+  mode: 'disabled'
+  entity: 'your_wandb_entity'
+dataset: 'crossdock_full'
+datadir: '/content/drive/MyDrive/DiffPhar_data/processed_crossdock_noH_full_temp/'
+enable_progress_bar: TRUE
+num_sanity_val_steps: 0
+
+model_type: 'flow_matching'
+
+mode: 'pocket_conditioning'
+pocket_representation: 'full-atom'
+batch_size: 4                # Full-atom has more nodes, reduce batch
+lr: 1.0e-4
+n_epochs: 100
+num_workers: 4
+gpus: 1
+clip_grad: True
+augment_rotation: False
+augment_noise: 0
+
+egnn_params:
+  device: 'cuda'
+  edge_cutoff: 6.0
+  joint_nf: 32
+  hidden_nf: 256
+  n_layers: 3
+  attention: True
+  tanh: True
+  norm_constant: 1
+  inv_sublayers: 1
+  sin_embedding: False
+  aggregation_method: 'sum'
+  normalization_factor: 100
+
+diffusion_params:
+  diffusion_steps: 100
+  diffusion_noise_schedule: 'polynomial_2'
+  diffusion_noise_precision: 1.0e-5
+  diffusion_loss_type: 'l2'
+  normalize_factors: [1, 4]
+  lambda_h: 1.0
+  class_weights: [0.3923, 0.2097, 1.7801, 2.4511, 0.1426, 0.2282, 0.5558, 2.2402]
+
+eval_epochs: 25
+eval_params:
+  n_eval_samples: 50
+  eval_batch_size: 50

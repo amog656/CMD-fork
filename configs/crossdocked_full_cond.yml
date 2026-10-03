@@ -5,9 +5,10 @@ wandb_params:
   entity: 'my_wandb_entity'
 dataset: 'crossdock_full'
 datadir: 'C:/Users/hanut sai/CMD-GEN/DiffPhar/data_raw/processed_crossdock_noH_full_temp/'
-# NOTE: Full-atom processed data not present; run process_crossdock.py first
 enable_progress_bar: TRUE
 num_sanity_val_steps: 0
+
+model_type: 'flow_matching'
 
 mode: 'pocket_conditioning'
 pocket_representation: 'full-atom'

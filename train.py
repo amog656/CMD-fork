@@ -59,7 +59,7 @@ if __name__ == "__main__":
     ckpt_path = None if args.resume is None else Path(args.resume)
     if args.resume is not None:
         resume_config = torch.load(
-            ckpt_path, map_location=torch.device('cpu'), weights_only=False)['hyper_parameters']
+            ckpt_path, map_location=torch.device('cpu'))['hyper_parameters']
 
         config = merge_configs(config, resume_config)
 
@@ -103,13 +103,11 @@ if __name__ == "__main__":
         dirpath=Path(out_dir, 'checkpoints'),
         filename="best-model-epoch={epoch:02d}",
         monitor="loss/val",
+        # auto_insert_metric_name=False,
         save_top_k=1,
         save_last=True,
         mode="min",
     )
-
-    # Mixed precision for Colab (16-mixed) - set precision in config or default to 32
-    precision = getattr(args, 'precision', 32)
 
     trainer = pl.Trainer(
         max_epochs=args.n_epochs,
@@ -118,12 +116,12 @@ if __name__ == "__main__":
         enable_progress_bar=args.enable_progress_bar,
         num_sanity_val_steps=args.num_sanity_val_steps,
         accelerator='gpu', devices=args.gpus,
-        strategy='auto' if args.gpus == 1 else 'ddp',
-        precision=precision,
-        gradient_clip_val=getattr(args, 'gradient_clip_val', None),
+        strategy='auto' if args.gpus == 1 else 'ddp'
     )
 
     trainer.fit(model=pl_module, ckpt_path=ckpt_path)
 
     # # run test set
     # result = trainer.test(ckpt_path='best')
+
+

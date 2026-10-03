@@ -99,7 +99,7 @@ def process_ligand_and_pocket(pdbfile, sdffile,
     phar_coords = np.array(position)
     if len(phar_coords) == 0:
         return None
-    phar_one_hot = convert_pharmacophore_to_one_hot(pharmacophore)
+    phar_one_hot = convert_pharmacophore_to_one_hot(pharmocophore)
 
     phar_data = {
         'phar_coords': phar_coords,
