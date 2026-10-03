@@ -1,0 +1,53 @@
+# Colab-optimized config for DiffPhar Flow Matching
+# Usage: python train.py --config configs/crossdocked_ca_cond_colab.yml
+
+run_name: 'crossdocked_ca_cond_colab'
+logdir: '/content/drive/MyDrive/DiffPhar_results/logdir/'  # Change if not using Drive
+wandb_params:
+  mode: 'disabled'  # Set to 'online' with entity for W&B logging
+  entity: 'your_wandb_entity'
+dataset: 'crossdock'
+datadir: '/content/drive/MyDrive/DiffPhar_data/processed_crossdock_noH_ca_only_temp/'  # Mount Drive first
+enable_progress_bar: TRUE
+num_sanity_val_steps: 0
+
+model_type: 'flow_matching'
+
+mode: 'pocket_conditioning'  # joint, pocket_conditioning, SimpleConditionalDDPM
+pocket_representation: 'CA' # full-atom, CA
+batch_size: 8                # T4 16GB can handle 8-16
+lr: 1.0e-4
+n_epochs: 100                # Reduced for testing; increase to 1000 for full run
+num_workers: 4               # Colab supports multiprocessing
+gpus: 1
+clip_grad: True
+augment_rotation: False
+augment_noise: 0
+
+egnn_params:
+  device: 'cuda'
+  edge_cutoff: 6.0
+  joint_nf: 32
+  hidden_nf: 256
+  n_layers: 5
+  attention: True
+  tanh: True
+  norm_constant: 1
+  inv_sublayers: 1
+  sin_embedding: False
+  aggregation_method: 'sum'
+  normalization_factor: 100  # used if aggregation_method='sum'
+
+diffusion_params:
+  diffusion_steps: 500
+  diffusion_noise_schedule: 'polynomial_2'
+  diffusion_noise_precision: 1.0e-5
+  diffusion_loss_type: 'l2'
+  normalize_factors: [1, 4]  # [x, h]
+  lambda_h: 1.0
+  class_weights: [0.3923, 0.2097, 1.7801, 2.4511, 0.1426, 0.2282, 0.5558, 2.2402]  # normalized inverse frequency (sum=8)
+
+eval_epochs: 25              # Evaluate more frequently
+eval_params:
+  n_eval_samples: 50
+  eval_batch_size: 50

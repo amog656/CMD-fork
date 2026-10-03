@@ -1,0 +1,30 @@
+# Data
+data_raw/
+*.npz
+*.tar.gz
+split_by_name.pt
+
+# Checkpoints & outputs
+checkpoints/
+results/
+*.ckpt
+*.json
+fm_generation_test/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Large files
+*.pkl
+*.pkl.gz
+
+# OS
+.DS_Store
+Thumbs.db
