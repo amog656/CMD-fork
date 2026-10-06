@@ -58,8 +58,11 @@ def process_ligand_and_pocket(pdbfile, sdffile,
     # ligand
     try:
         ligand = Chem.SDMolSupplier(str(sdffile))[0]
-    except:
-        raise Exception(f'cannot read sdf mol ({sdffile})')
+    except Exception as e:
+        raise Exception(f'cannot read sdf mol ({sdffile}): {e}')
+
+    if ligand is None:
+        raise Exception(f'SDMolSupplier returned None for ({sdffile})')
 
     lig_coords = np.array([list(ligand.GetConformer(0).GetAtomPosition(idx))
                            for idx in range(ligand.GetNumAtoms())])
@@ -221,6 +224,11 @@ if __name__ == '__main__':
     parser.add_argument('--random_seed', type=int, default=42)
     args = parser.parse_args()
 
+    # Set seeds for reproducibility
+    random.seed(args.random_seed)
+    np.random.seed(args.random_seed)
+    torch.manual_seed(args.random_seed)
+
     datadir = args.basedir / 'crossdocked_pocket10/'
 
     if args.ca_only:
@@ -297,7 +305,7 @@ if __name__ == '__main__':
                     continue
                 phar_data, pocket_data = result
             except (KeyError, AssertionError, FileNotFoundError, IndexError,
-                    ValueError) as e:
+                    ValueError, AttributeError, Exception) as e:
                 print(type(e).__name__, e, pocket_fn, lig_phar_fn)
                 num_failed += 1
                 pbar.set_description(f'#failed: {num_failed}')

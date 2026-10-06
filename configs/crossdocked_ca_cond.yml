@@ -1,10 +1,10 @@
 run_name: 'crossdocked_ca_cond'
-logdir: 'C:/Users/hanut sai/CMD-GEN/DiffPhar/results/logdir/'
+logdir: './results/logdir/'
 wandb_params:
-  mode: 'disabled'  # disabled, offline, online
-  entity: 'my_wandb_entity'
+  mode: 'disabled'
+  entity: 'your_wandb_entity'
 dataset: 'crossdock'
-datadir: 'C:/Users/hanut sai/CMD-GEN/DiffPhar/data_raw/processed_crossdock_noH_ca_only_temp/'
+datadir: './data_raw/processed_crossdock_noH_ca_only_temp/'
 enable_progress_bar: TRUE
 num_sanity_val_steps: 0
 

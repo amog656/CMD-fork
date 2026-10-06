@@ -44,8 +44,8 @@ def convert_pharmacophore_to_one_hot(pharmacophore, num_classes=num_phar_classes
     one_hot_array = np.zeros((len(pharmacophore), num_classes))
 
     for i, value in enumerate(pharmacophore):
-        if 0 <= value <= num_classes:
-            one_hot_array[i, value - 1] = 1.0
+        if 0 <= value < num_classes:
+            one_hot_array[i, value] = 1.0
         else:
             raise ValueError("Pharmacophore value is out of range.")
 

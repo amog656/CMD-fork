@@ -174,7 +174,8 @@ class MoleculeProperties:
         rule_1 = Descriptors.ExactMolWt(rdmol) < 500
         rule_2 = Lipinski.NumHDonors(rdmol) <= 5
         rule_3 = Lipinski.NumHAcceptors(rdmol) <= 10
-        rule_4 = (logp := Crippen.MolLogP(rdmol) >= -2) & (logp <= 5)
+        logp = Crippen.MolLogP(rdmol)
+        rule_4 = (-2 <= logp) & (logp <= 5)
         rule_5 = Chem.rdMolDescriptors.CalcNumRotatableBonds(rdmol) <= 10
         return np.sum([int(a) for a in [rule_1, rule_2, rule_3, rule_4, rule_5]])
 

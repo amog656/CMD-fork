@@ -11,7 +11,7 @@ import numpy as np
 from lightning_modules import PharPocketDDPM
 
 import os
-os.environ["WANDB_API_KEY"] = '110a7a7a4f661b920879bde5fca98297318e1385'
+os.environ["WANDB_API_KEY"] = os.getenv("WANDB_API_KEY", "")
 
 
 def merge_args_and_yaml(args, config_dict):

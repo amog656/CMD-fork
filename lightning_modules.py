@@ -281,15 +281,8 @@ class PharPocketDDPM(pl.LightningModule):
             self.log(f'{m}/{split}', value, batch_size=batch_size, **kwargs)
 
     def training_step(self, data, *args):
-        if self.augment_noise > 0:
-            raise NotImplementedError
-            # Add noise eps ~ N(0, augment_noise) around points.
-            eps = sample_center_gravity_zero_gaussian(x.size(), x.device)
-            x = x + eps * args.augment_noise
-
-        if self.augment_rotation:
-            raise NotImplementedError
-            x = utils.random_rotation(x).detach()
+        # augment_noise and augment_rotation are not used (set to 0/False in configs)
+        # and the original implementation was incomplete. Re-enable if needed.
 
         nll, info = self.forward(data)
         loss = nll.mean(0)
@@ -298,6 +291,32 @@ class PharPocketDDPM(pl.LightningModule):
         self.log_metrics(info, 'train', batch_size=len(data['num_phar_atoms']))
 
         return info
+
+    def configure_gradient_clipping(self, optimizer, gradient_clip_val, gradient_clip_algorithm, optimizer_idx=0):
+
+        if not self.clip_grad:
+            return
+
+        # Allow gradient norm to be 150% + 2 * stdev of the recent history.
+        max_grad_norm = 1.5 * self.gradnorm_queue.mean() + \
+                        2 * self.gradnorm_queue.std()
+
+        # Get current grad_norm
+        params = [p for g in optimizer.param_groups for p in g['params']]
+        grad_norm = utils.get_grad_norm(params)
+
+        # Lightning will handle the gradient clipping
+        self.clip_gradients(optimizer, gradient_clip_val=max_grad_norm,
+                            gradient_clip_algorithm='norm')
+
+        if float(grad_norm) > max_grad_norm:
+            self.gradnorm_queue.add(float(max_grad_norm))
+        else:
+            self.gradnorm_queue.add(float(grad_norm))
+
+        if float(grad_norm) > max_grad_norm:
+            print(f'Clipped gradient with value {grad_norm:.1f} '
+                  f'while allowed {max_grad_norm:.1f}')
 
     def _shared_eval(self, data, prefix, *args):
         phar, pocket = self.get_phar_and_pocket(data)
@@ -544,23 +563,19 @@ class PharPocketDDPM(pl.LightningModule):
             phar_type = h_onehot.argmax(dim=1).detach().cpu()
 
             phar_to_coords = {}
-            for mol_pc in zip(utils.batch_to_list(x, phar_mask),
-                              utils.batch_to_list(phar_type, phar_mask)):
+            for mol_idx, mol_pc in enumerate(zip(utils.batch_to_list(x, phar_mask),
+                                                  utils.batch_to_list(phar_type, phar_mask))):
                 coords_batch = mol_pc[0]
                 atom_types = mol_pc[1]
 
                 atom_names = [self.dataset_info["phar_decoder"][x] for x in atom_types]
 
-                # Use batch index to name molecules properly
-                for batch_idx, (atom_name, coords) in enumerate(zip(atom_names, coords_batch)):
-                    molecule_name = f"Molecule_{batch_idx + 1}"
+                molecule_name = f"Molecule_{mol_idx + 1}"
+                phar_to_coords[molecule_name] = {}
 
-                    if molecule_name not in phar_to_coords:
-                        phar_to_coords[molecule_name] = {}
-
+                for atom_name, coords in zip(atom_names, coords_batch):
                     if atom_name not in phar_to_coords[molecule_name]:
                         phar_to_coords[molecule_name][atom_name] = []
-
                     phar_to_coords[molecule_name][atom_name].append(coords)
 
             return phar_to_coords
@@ -613,59 +628,19 @@ class PharPocketDDPM(pl.LightningModule):
         phar_type = xh_phar[:, self.x_dims:].argmax(1).detach().cpu()
 
         phar_to_coords = {}
-        for mol_pc in zip(utils.batch_to_list(x, phar_mask),
-                          utils.batch_to_list(phar_type, phar_mask)):
-            # 提取坐标和药效团类型
+        for mol_idx, mol_pc in enumerate(zip(utils.batch_to_list(x, phar_mask),
+                                              utils.batch_to_list(phar_type, phar_mask))):
             coords_batch = mol_pc[0]
             atom_types = mol_pc[1]
 
-            # 转换药效团类型为药效团名称
             atom_names = [self.dataset_info["phar_decoder"][x] for x in atom_types]
 
-            # 在循环内部维护一个计数器来为每个分子命名
-            molecule_counter = 1
+            molecule_name = f"Molecule_{mol_idx + 1}"
+            phar_to_coords[molecule_name] = {}
 
             for atom_name, coords in zip(atom_names, coords_batch):
-                # 使用分子计数器来为每个分子命名
-                molecule_name = f"Molecule_{molecule_counter}"
-
-                # 创建一个新的分子字典
-                if molecule_name not in phar_to_coords:
-                    phar_to_coords[molecule_name] = {}
-
-                # 使用列表存储坐标，以处理相同药效团名称的情况
                 if atom_name not in phar_to_coords[molecule_name]:
                     phar_to_coords[molecule_name][atom_name] = []
-
-                # 将坐标添加到分子的药效团名称下 (convert to list for JSON serialization)
                 phar_to_coords[molecule_name][atom_name].append(coords.tolist())
 
-                # 增加分子计数器，以确保每个分子有唯一的名称
-                molecule_counter += 1
         return phar_to_coords
-
-def configure_gradient_clipping(self, optimizer, gradient_clip_val, gradient_clip_algorithm, optimizer_idx=0):
-
-        if not self.clip_grad:
-            return
-
-        # Allow gradient norm to be 150% + 2 * stdev of the recent history.
-        max_grad_norm = 1.5 * self.gradnorm_queue.mean() + \
-                        2 * self.gradnorm_queue.std()
-
-        # Get current grad_norm
-        params = [p for g in optimizer.param_groups for p in g['params']]
-        grad_norm = utils.get_grad_norm(params)
-
-        # Lightning will handle the gradient clipping
-        self.clip_gradients(optimizer, gradient_clip_val=max_grad_norm,
-                            gradient_clip_algorithm='norm')
-
-        if float(grad_norm) > max_grad_norm:
-            self.gradnorm_queue.add(float(max_grad_norm))
-        else:
-            self.gradnorm_queue.add(float(grad_norm))
-
-        if float(grad_norm) > max_grad_norm:
-            print(f'Clipped gradient with value {grad_norm:.1f} '
-                  f'while allowed {max_grad_norm:.1f}')

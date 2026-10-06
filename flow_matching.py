@@ -51,13 +51,10 @@ class FlowMatching(nn.Module):
         import numpy as np
         from equivariant_diffusion.en_diffusion import DistributionNodes
         size_dist_path = os.path.join(os.path.dirname(__file__), 'data_raw', 'processed_crossdock_noH_ca_only_temp', 'size_distribution.npy')
-        if os.path.exists(size_dist_path):
-            size_histogram = np.load(size_dist_path)
-            self.size_distribution = DistributionNodes(size_histogram)
-        else:
-            # Fallback: create a dummy distribution
-            from equivariant_diffusion.en_diffusion import DistributionNodes
-            self.size_distribution = DistributionNodes(np.zeros((10, 10)))
+        if not os.path.exists(size_dist_path):
+            raise FileNotFoundError(f"size_distribution.npy not found at {size_dist_path}. Run process_crossdock.py first.")
+        size_histogram = np.load(size_dist_path)
+        self.size_distribution = DistributionNodes(size_histogram)
 
         # Pharmacophore type decoder for final output
         self.phar_decoder = ds_info['phar_decoder']  # list of 8 class names

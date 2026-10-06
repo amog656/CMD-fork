@@ -5,7 +5,6 @@ import torch
 import numpy as np
 from rdkit import Chem
 from rdkit.Chem.rdForceFieldHelpers import UFFOptimizeMolecule, UFFHasAllMoleculeParams
-import openbabel
 
 import utils
 from constants import bonds1, bonds2, bonds3, margin1, margin2, margin3, \
@@ -65,6 +64,11 @@ def make_mol_openbabel(positions, atom_types, atom_decoder):
     Returns:
         rdkit molecule
     """
+    try:
+        import openbabel
+    except ImportError:
+        raise ImportError("openbabel required for make_mol_openbabel. Install with: pip install openbabel-wheel")
+
     atom_types = [atom_decoder[x] for x in atom_types]
 
     with tempfile.NamedTemporaryFile() as tmp:
