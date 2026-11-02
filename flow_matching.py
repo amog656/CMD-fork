@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_scatter import scatter_mean
+from utils import scatter_mean
 from typing import Dict, Tuple, Optional
 
 from equivariant_diffusion.dynamics import EGNNDynamics

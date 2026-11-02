@@ -178,7 +178,7 @@ if __name__ == "__main__":
             from Bio.PDB import PDBParser
             from Bio.PDB.Polypeptide import protein_letters_3to1 as three_to_one
             import torch.nn.functional as F
-            from torch_scatter import scatter_mean
+            from utils import scatter_mean
             from constants import FLOAT_TYPE, INT_TYPE
             
             pdb_struct = PDBParser(QUIET=True).get_structure('', args.pdbfile)[0]

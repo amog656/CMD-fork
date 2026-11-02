@@ -53,12 +53,22 @@ python generate_phars.py checkpoints/epoch=XX.ckpt \
 
 ## Colab Setup
 
-1. **Clone repo:**
+1. **Clone repo (or your fork) and checkout branch:**
 ```bash
-git clone -b diffphar-dev https://github.com/YOUR_USERNAME/CMD-GEN.git
-cd CMD-GEN/DiffPhar
+git clone https://github.com/amog656/CMD-fork.git
+cd CMD-fork
+git checkout colab-training
+```
+
+2. **Install dependencies:**
+```bash
+# Core dependencies
 pip install -r requirements.txt
-pip install torch-scatter -f https://data.pyg.org/whl/torch-2.5.1+cu121.html
+
+# (Optional) torch-scatter acceleration:
+# If you want pre-compiled C++/CUDA kernels for scatter operations:
+# pip install torch-scatter -f https://data.pyg.org/whl/torch-$(python -c "import torch; print(torch.__version__.split('+')[0])")+cu$(python -c "import torch; print(torch.version.cuda.replace('.', '')[:3])").html
+# Note: If torch-scatter is not installed, the built-in PyTorch fallback in utils.py will automatically run seamlessly!
 ```
 
 2. **Mount Google Drive (for data & checkpoints):**

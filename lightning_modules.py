@@ -10,7 +10,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 import wandb
-from torch_scatter import scatter_add, scatter_mean
+from utils import scatter_add, scatter_mean
 from Bio.PDB import PDBParser
 from Bio.PDB.Polypeptide import protein_letters_3to1 as three_to_one
 

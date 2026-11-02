@@ -1,4 +1,4 @@
-from typing import Union, Iterable
+from typing import Union, Iterable, Optional
 
 import numpy as np
 import torch
@@ -51,6 +51,55 @@ def get_grad_norm(
 
     if len(parameters) == 0:
         return torch.tensor(0.)
+
+
+def scatter_add(src: torch.Tensor, index: torch.Tensor, dim: int = 0, dim_size: Optional[int] = None) -> torch.Tensor:
+    """
+    Fallback for torch_scatter.scatter_add using pure PyTorch operations.
+    Supports index as 1D batch/segment mask or expanded tensor.
+    """
+    try:
+        import torch_scatter
+        return torch_scatter.scatter_add(src, index, dim=dim, dim_size=dim_size)
+    except ImportError:
+        pass
+
+    if dim < 0:
+        dim = src.dim() + dim
+    if dim_size is None:
+        dim_size = int(index.max().item()) + 1 if index.numel() > 0 else 0
+
+    shape = list(src.shape)
+    shape[dim] = dim_size
+    out = torch.zeros(shape, dtype=src.dtype, device=src.device)
+
+    if index.dim() == 1 and src.dim() > 1 and index.size(0) == src.size(dim):
+        index_expanded = index.view([-1 if i == dim else 1 for i in range(src.dim())]).expand_as(src)
+    else:
+        index_expanded = index
+    return out.scatter_add_(dim, index_expanded, src)
+
+
+def scatter_mean(src: torch.Tensor, index: torch.Tensor, dim: int = 0, dim_size: Optional[int] = None) -> torch.Tensor:
+    """
+    Fallback for torch_scatter.scatter_mean using pure PyTorch operations.
+    """
+    try:
+        import torch_scatter
+        return torch_scatter.scatter_mean(src, index, dim=dim, dim_size=dim_size)
+    except ImportError:
+        pass
+
+    if dim < 0:
+        dim = src.dim() + dim
+    if dim_size is None:
+        dim_size = int(index.max().item()) + 1 if index.numel() > 0 else 0
+
+    out_sum = scatter_add(src, index, dim=dim, dim_size=dim_size)
+    ones = torch.ones_like(src)
+    counts = scatter_add(ones, index, dim=dim, dim_size=dim_size)
+    counts = counts.clamp(min=1)
+    return out_sum / counts
 
     device = parameters[0].grad.device
 

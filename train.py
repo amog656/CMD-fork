@@ -58,8 +58,12 @@ if __name__ == "__main__":
     # Get main config
     ckpt_path = None if args.resume is None else Path(args.resume)
     if args.resume is not None:
-        resume_config = torch.load(
-            ckpt_path, map_location=torch.device('cpu'))['hyper_parameters']
+        try:
+            resume_config = torch.load(
+                ckpt_path, map_location=torch.device('cpu'), weights_only=False)['hyper_parameters']
+        except TypeError:
+            resume_config = torch.load(
+                ckpt_path, map_location=torch.device('cpu'))['hyper_parameters']
 
         config = merge_configs(config, resume_config)
 
@@ -109,14 +113,21 @@ if __name__ == "__main__":
         mode="min",
     )
 
+    # Automatically detect accelerator and devices
+    use_gpu = torch.cuda.is_available() and args.gpus > 0
+    accelerator = 'gpu' if use_gpu else 'cpu'
+    devices = args.gpus if use_gpu else 1
+    strategy = 'auto' if (not use_gpu or args.gpus == 1) else 'ddp'
+
     trainer = pl.Trainer(
         max_epochs=args.n_epochs,
         logger=logger,
         callbacks=[checkpoint_callback],
         enable_progress_bar=args.enable_progress_bar,
         num_sanity_val_steps=args.num_sanity_val_steps,
-        accelerator='gpu', devices=args.gpus,
-        strategy='auto' if args.gpus == 1 else 'ddp'
+        accelerator=accelerator,
+        devices=devices,
+        strategy=strategy
     )
 
     trainer.fit(model=pl_module, ckpt_path=ckpt_path)
