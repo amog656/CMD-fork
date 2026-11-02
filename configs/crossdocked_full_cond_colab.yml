@@ -1,4 +1,4 @@
-# Colab-optimized full-atom config for DiffPhar
+# Colab Pro+ optimized full-atom config for DiffPhar
 run_name: 'crossdocked_full_cond_colab'
 logdir: '/content/drive/MyDrive/DiffPhar_results/logdir/'
 wandb_params:
@@ -13,9 +13,9 @@ model_type: 'flow_matching'
 
 mode: 'pocket_conditioning'
 pocket_representation: 'full-atom'
-batch_size: 4                # Full-atom has more nodes, reduce batch
+batch_size: 8                # Pro+ GPUs (A100 40GB/80GB or V100 16GB) can handle 8-16
 lr: 1.0e-4
-n_epochs: 100
+n_epochs: 20                 # Configured for 20 epochs
 num_workers: 4
 gpus: 1
 clip_grad: True
@@ -27,7 +27,7 @@ egnn_params:
   edge_cutoff: 6.0
   joint_nf: 32
   hidden_nf: 256
-  n_layers: 3
+  n_layers: 4                # Full expressive capacity
   attention: True
   tanh: True
   norm_constant: 1
@@ -45,7 +45,7 @@ diffusion_params:
   lambda_h: 1.0
   class_weights: [0.3923, 0.2097, 1.7801, 2.4511, 0.1426, 0.2282, 0.5558, 2.2402]
 
-eval_epochs: 25
+eval_epochs: 5               # Evaluate every 5 epochs when running 20 total
 eval_params:
   n_eval_samples: 50
   eval_batch_size: 50
