@@ -55,21 +55,37 @@ if __name__ == "__main__":
 
     assert 'resume' not in config
 
-    # Get main config
+    # Merge initial config first to know logdir and run_name
     ckpt_path = None if args.resume is None else Path(args.resume)
-    if args.resume is not None:
-        try:
-            resume_config = torch.load(
-                ckpt_path, map_location=torch.device('cpu'), weights_only=False)['hyper_parameters']
-        except TypeError:
-            resume_config = torch.load(
-                ckpt_path, map_location=torch.device('cpu'))['hyper_parameters']
-
-        config = merge_configs(config, resume_config)
-
     args = merge_args_and_yaml(args, config)
 
     out_dir = Path(args.logdir, args.run_name)
+    ckpt_dir = Path(out_dir, 'checkpoints')
+
+    # Automatically locate latest checkpoint to resume if session disconnected
+    if ckpt_path is None and ckpt_dir.exists():
+        last_ckpt = ckpt_dir / 'last.ckpt'
+        if last_ckpt.exists():
+            print(f"==> Found existing last checkpoint at {last_ckpt}. Resuming automatically...")
+            ckpt_path = last_ckpt
+        else:
+            checkpoints = sorted(ckpt_dir.glob("*.ckpt"), key=os.path.getmtime)
+            if checkpoints:
+                ckpt_path = checkpoints[-1]
+                print(f"==> Found existing checkpoint {ckpt_path}. Resuming automatically...")
+
+    if ckpt_path is not None:
+        try:
+            resume_config = torch.load(
+                ckpt_path, map_location=torch.device('cpu'), weights_only=False)['hyper_parameters']
+        except (TypeError, KeyError, Exception) as e:
+            print(f"Notice: loading hyper_parameters from checkpoint encountered: {e}")
+            resume_config = {}
+
+        if resume_config:
+            config = merge_configs(config, resume_config)
+            args = merge_args_and_yaml(args, config)
+
     histogram_file = Path(args.datadir, 'size_distribution.npy')
     histogram = np.load(histogram_file).tolist()
     pl_module = PharPocketDDPM(
@@ -107,10 +123,10 @@ if __name__ == "__main__":
         dirpath=Path(out_dir, 'checkpoints'),
         filename="best-model-epoch={epoch:02d}",
         monitor="loss/val",
-        # auto_insert_metric_name=False,
         save_top_k=1,
         save_last=True,
         mode="min",
+        every_n_epochs=1,
     )
 
     # Automatically detect accelerator and devices
