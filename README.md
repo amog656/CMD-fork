@@ -51,39 +51,37 @@ python generate_phars.py checkpoints/epoch=XX.ckpt \
   --n_samples 20 --num_nodes_phar 10
 ```
 
-## Colab Setup
+## Colab Setup (Pro+ / Standard)
 
-1. **Clone repo (or your fork) and checkout branch:**
-```bash
-git clone https://github.com/amog656/CMD-fork.git
-cd CMD-fork
-git checkout colab-training
-```
-
-2. **Install dependencies:**
-```bash
-# Core dependencies
-pip install -r requirements.txt
-
-# (Optional) torch-scatter acceleration:
-# If you want pre-compiled C++/CUDA kernels for scatter operations:
-# pip install torch-scatter -f https://data.pyg.org/whl/torch-$(python -c "import torch; print(torch.__version__.split('+')[0])")+cu$(python -c "import torch; print(torch.version.cuda.replace('.', '')[:3])").html
-# Note: If torch-scatter is not installed, the built-in PyTorch fallback in utils.py will automatically run seamlessly!
-```
-
-2. **Mount Google Drive (for data & checkpoints):**
+1. **Mount Google Drive (for data & checkpoints):**
 ```python
 from google.colab import drive
 drive.mount('/content/drive')
 ```
 
-3. **Upload processed data to Drive:**
-   - Local: `data_raw/processed_crossdock_noH_ca_only_temp/` → Drive: `/MyDrive/DiffPhar_data/`
-
-4. **Train on Colab:**
+2. **Clone repo and checkout the active branch:**
 ```bash
-python train.py --config configs/crossdocked_ca_cond_colab.yml \
-  --resume /content/drive/MyDrive/DiffPhar_checkpoints/last.ckpt  # optional
+!git clone -b diffphar-dev https://github.com/amog656/CMD-fork.git
+%cd CMD-fork
+!pip install -r requirements.txt
+```
+
+3. **Train on Colab:**
+
+* **Full-Atom Training (Colab Pro+ Recommended, 20 epochs):**
+```bash
+!python train.py --config configs/crossdocked_full_cond_colab.yml
+```
+
+* **CA-Only Training (Lightweight / T4 GPU):**
+```bash
+!python train.py --config configs/crossdocked_ca_cond_colab.yml
+```
+
+4. **Resume Training (Optional):**
+```bash
+!python train.py --config configs/crossdocked_full_cond_colab.yml \
+  --resume /content/drive/MyDrive/DiffPhar_results/logdir/crossdocked_full_cond_colab/checkpoints/last.ckpt
 ```
 
 ## Config Differences
