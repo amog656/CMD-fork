@@ -146,6 +146,7 @@ class PharPocketDDPM(pl.LightningModule):
                 lambda_h=lambda_h,
                 class_weights=class_weights,
                 oracle_class_training=self.oracle_class_training,
+                size_histogram=node_histogram,
             )
             self.ddpm = None
         else:

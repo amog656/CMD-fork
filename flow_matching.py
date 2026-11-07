@@ -1,8 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 from utils import scatter_mean
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, Any
 
 from equivariant_diffusion.dynamics import EGNNDynamics
 from constants import dataset_params, FLOAT_TYPE, INT_TYPE
@@ -25,6 +26,7 @@ class FlowMatching(nn.Module):
         lambda_h: float = 1.0,
         class_weights: Optional[torch.Tensor] = None,
         oracle_class_training: bool = False,
+        size_histogram: Optional[Any] = None,
     ):
         super().__init__()
         self.dynamics = dynamics
@@ -46,15 +48,25 @@ class FlowMatching(nn.Module):
         self.norm_h = ds_info.get('norm_values', [1.0, 4.0])[1]
         self.norm_bias_h = ds_info.get('norm_biases', [None, 0.0])[1]
 
-        #  distribution of nodes - load from preprocessed data
-        import os
-        import numpy as np
+        # distribution of nodes - load from passed histogram or fallback to disk
         from equivariant_diffusion.en_diffusion import DistributionNodes
-        size_dist_path = os.path.join(os.path.dirname(__file__), 'data_raw', 'processed_crossdock_noH_ca_only_temp', 'size_distribution.npy')
-        if not os.path.exists(size_dist_path):
-            raise FileNotFoundError(f"size_distribution.npy not found at {size_dist_path}. Run process_crossdock.py first.")
-        size_histogram = np.load(size_dist_path)
-        self.size_distribution = DistributionNodes(size_histogram)
+        if size_histogram is not None:
+            if isinstance(size_histogram, list):
+                size_histogram = np.array(size_histogram)
+            self.size_distribution = DistributionNodes(size_histogram)
+        else:
+            import os
+            # Try looking in CA or full-atom directories or repo relative path
+            possible_paths = [
+                os.path.join(os.path.dirname(__file__), 'data_raw', 'processed_crossdock_noH_full_temp', 'size_distribution.npy'),
+                os.path.join(os.path.dirname(__file__), 'data_raw', 'processed_crossdock_noH_ca_only_temp', 'size_distribution.npy'),
+            ]
+            size_dist_path = next((p for p in possible_paths if os.path.exists(p)), None)
+            if size_dist_path is not None:
+                size_histogram = np.load(size_dist_path)
+                self.size_distribution = DistributionNodes(size_histogram)
+            else:
+                self.size_distribution = None
 
         # Pharmacophore type decoder for final output
         self.phar_decoder = ds_info['phar_decoder']  # list of 8 class names

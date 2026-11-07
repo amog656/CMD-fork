@@ -233,17 +233,17 @@ class MoleculeProperties:
               f"{len(pocket_rdmols)} pockets evaluated.")
 
         qed_flattened = [x for px in all_qed for x in px]
-        print(f"QED: {np.mean(qed_flattened):.3f} \pm {np.std(qed_flattened):.2f}")
+        print(f"QED: {np.mean(qed_flattened):.3f} +/- {np.std(qed_flattened):.2f}")
 
         sa_flattened = [x for px in all_sa for x in px]
-        print(f"SA: {np.mean(sa_flattened):.3f} \pm {np.std(sa_flattened):.2f}")
+        print(f"SA: {np.mean(sa_flattened):.3f} +/- {np.std(sa_flattened):.2f}")
 
         logp_flattened = [x for px in all_logp for x in px]
-        print(f"LogP: {np.mean(logp_flattened):.3f} \pm {np.std(logp_flattened):.2f}")
+        print(f"LogP: {np.mean(logp_flattened):.3f} +/- {np.std(logp_flattened):.2f}")
 
         lipinski_flattened = [x for px in all_lipinski for x in px]
-        print(f"Lipinski: {np.mean(lipinski_flattened):.3f} \pm {np.std(lipinski_flattened):.2f}")
+        print(f"Lipinski: {np.mean(lipinski_flattened):.3f} +/- {np.std(lipinski_flattened):.2f}")
 
-        print(f"Diversity: {np.mean(per_pocket_diversity):.3f} \pm {np.std(per_pocket_diversity):.2f}")
+        print(f"Diversity: {np.mean(per_pocket_diversity):.3f} +/- {np.std(per_pocket_diversity):.2f}")
 
         return all_qed, all_sa, all_logp, all_lipinski, per_pocket_diversity
