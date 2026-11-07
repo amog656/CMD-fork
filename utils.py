@@ -52,6 +52,14 @@ def get_grad_norm(
     if len(parameters) == 0:
         return torch.tensor(0.)
 
+    device = parameters[0].grad.device
+
+    total_norm = torch.norm(torch.stack(
+        [torch.norm(p.grad.detach(), norm_type).to(device) for p in
+         parameters]), norm_type)
+
+    return total_norm
+
 
 def scatter_add(src: torch.Tensor, index: torch.Tensor, dim: int = 0, dim_size: Optional[int] = None) -> torch.Tensor:
     """

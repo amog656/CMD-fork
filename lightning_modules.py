@@ -305,18 +305,21 @@ class PharPocketDDPM(pl.LightningModule):
         # Get current grad_norm
         params = [p for g in optimizer.param_groups for p in g['params']]
         grad_norm = utils.get_grad_norm(params)
+        if grad_norm is None:
+            return
+        grad_norm_val = float(grad_norm.item() if isinstance(grad_norm, torch.Tensor) else grad_norm)
 
         # Lightning will handle the gradient clipping
         self.clip_gradients(optimizer, gradient_clip_val=max_grad_norm,
                             gradient_clip_algorithm='norm')
 
-        if float(grad_norm) > max_grad_norm:
+        if grad_norm_val > max_grad_norm:
             self.gradnorm_queue.add(float(max_grad_norm))
         else:
-            self.gradnorm_queue.add(float(grad_norm))
+            self.gradnorm_queue.add(grad_norm_val)
 
-        if float(grad_norm) > max_grad_norm:
-            print(f'Clipped gradient with value {grad_norm:.1f} '
+        if grad_norm_val > max_grad_norm:
+            print(f'Clipped gradient with value {grad_norm_val:.1f} '
                   f'while allowed {max_grad_norm:.1f}')
 
     def _shared_eval(self, data, prefix, *args):
