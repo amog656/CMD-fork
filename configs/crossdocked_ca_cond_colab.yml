@@ -2,12 +2,12 @@
 # Usage: python train.py --config configs/crossdocked_ca_cond_colab.yml
 
 run_name: 'crossdocked_ca_cond_colab'
-logdir: '/content/drive/MyDrive/DiffPhar_results/logdir/'  # Change if not using Drive
+logdir: '/content/drive/MyDrive/DRUG DISVOVERY DATASETS/G1591 DATASET/outputs/'  # Change if not using Drive
 wandb_params:
   mode: 'disabled'  # Set to 'online' with entity for W&B logging
   entity: 'your_wandb_entity'
 dataset: 'crossdock'
-datadir: '/content/drive/MyDrive/DiffPhar_data/processed_crossdock_noH_ca_only_temp/'  # Mount Drive first
+datadir: '/content/drive/MyDrive/DRUG DISVOVERY DATASETS/G1591 DATASET/DiffPhar_data/processed_crossdock_noH_ca_only_temp/'  # Mount Drive first
 enable_progress_bar: TRUE
 num_sanity_val_steps: 0
 

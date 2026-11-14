@@ -53,35 +53,64 @@ python generate_phars.py checkpoints/epoch=XX.ckpt \
 
 ## Colab Setup (Pro+ / Standard)
 
-1. **Mount Google Drive (for data & checkpoints):**
+### Step 1: Mount Google Drive
 ```python
 from google.colab import drive
 drive.mount('/content/drive')
 ```
 
-2. **Clone repo and checkout the active branch:**
+> **Important (For Shared Folders):**  
+> If the dataset folder (`DRUG DISVOVERY DATASETS` or `G1591 DATASET`) was shared with your Google account, Google Colab cannot access it under `/content/drive/MyDrive/` directly from "Shared with me".  
+> **To fix this:**
+> 1. Open [Google Drive](https://drive.google.com).
+> 2. Go to **"Shared with me"**.
+> 3. Right-click the folder (`DRUG DISVOVERY DATASETS` or `G1591 DATASET`).
+> 4. Select **Organize** > **Add shortcut** > Select **"My Drive"** > Click **Add**.  
+> This maps it directly to `/content/drive/MyDrive/DRUG DISVOVERY DATASETS/G1591 DATASET/`.
+
+---
+
+### Step 2: Clone Repo & Install Dependencies
 ```bash
 !git clone -b diffphar-dev https://github.com/amog656/CMD-fork.git
 %cd CMD-fork
 !pip install -r requirements.txt
 ```
 
-3. **Train on Colab:**
+---
 
-* **Full-Atom Training (Colab Pro+ Recommended, 20 epochs):**
+### Step 3: Launch Training
+
+* **Full-Atom Training (Recommended, 20 epochs):**
 ```bash
 !python train.py --config configs/crossdocked_full_cond_colab.yml
 ```
 
-* **CA-Only Training (Lightweight / T4 GPU):**
+* **$C_\alpha$-Only Training (Lightweight / T4 GPU):**
 ```bash
 !python train.py --config configs/crossdocked_ca_cond_colab.yml
 ```
 
-4. **Resume Training (Optional):**
+---
+
+### Step 4: Auto-Resume if Training Stops / Disconnects
+
+The training script automatically creates checkpoints at the end of **every epoch** and saves `last.ckpt` under:
+`/content/drive/MyDrive/DRUG DISVOVERY DATASETS/G1591 DATASET/outputs/<run_name>/checkpoints/`
+
+**If training disconnects or stops:**
+Simply reconnect and re-run the same command:
+```bash
+!python train.py --config configs/crossdocked_full_cond_colab.yml
+```
+`train.py` automatically detects `last.ckpt`, prints:
+`==> [Auto-Resume] Found existing last checkpoint at: .../last.ckpt`
+and resumes model weights, optimizer momentum, learning rates, and epochs seamlessly from where it stopped.
+
+*(Optional)* You can also explicitly specify a checkpoint to resume from:
 ```bash
 !python train.py --config configs/crossdocked_full_cond_colab.yml \
-  --resume /content/drive/MyDrive/DiffPhar_results/logdir/crossdocked_full_cond_colab/checkpoints/last.ckpt
+  --resume "/content/drive/MyDrive/DRUG DISVOVERY DATASETS/G1591 DATASET/outputs/crossdocked_full_cond_colab/checkpoints/last.ckpt"
 ```
 
 ## Config Differences

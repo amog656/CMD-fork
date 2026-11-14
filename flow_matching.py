@@ -119,8 +119,8 @@ class FlowMatching(nn.Module):
         x_t = (1 - t_nodes) * x0 + t_nodes * x1         # (N, 3)
 
         # --- 4. h-conditioning ---
-        if self.oracle_class_training and self.training:
-            # Oracle class conditioning during training: use ground-truth class labels
+        if self.oracle_class_training:
+            # Oracle class conditioning: use ground-truth class labels
             h_cond = h_gt                 # (N, 8) - ground truth class one-hot
         else:
             # Standard training/inference: zeros for pharmacophore nodes
@@ -150,11 +150,10 @@ class FlowMatching(nn.Module):
         v_target = x1 - x0                              # (N, 3)
         loss_coord = F.mse_loss(vel_phar, v_target)
 
-        # Pharmacophore type classification loss
-        if self.class_weights is not None:
-            loss_h = F.cross_entropy(h_logits, h_gt_classes, weight=self.class_weights)
-        else:
-            loss_h = F.cross_entropy(h_logits, h_gt_classes)
+        # Pharmacophore type classification loss: time-weighted by t so pure noise at t ~ 0
+        # does not inject random gradient noise into the EGNN backbone.
+        ce_per_node = F.cross_entropy(h_logits, h_gt_classes, weight=self.class_weights, reduction='none')
+        loss_h = (t_nodes.squeeze(-1) * ce_per_node).mean()
 
         # Total loss
         loss = loss_coord + self.lambda_h * loss_h
