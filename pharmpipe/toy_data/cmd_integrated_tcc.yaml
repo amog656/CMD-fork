@@ -1,0 +1,98 @@
+# Target configuration with CMD continuous flow-matching and frozen GCPG generator integrated.
+target:
+  name: toy
+  structure_path: toy.pdb
+  construct: {chain: A, residues: [1, 1]}
+  pocket_source: residues
+  pocket_residues: [1]
+off_targets: []
+mode: A
+reference:
+  actives_path: actives.csv
+  inactives_path: null
+  decoys_path: decoys.csv
+selectivity_goal_fold: 10
+property_gates:
+  MW: 500
+  LogP: 5
+  QED: 0.4
+  SAS: 5
+  rotatable_bonds: null
+  TPSA: null
+state_weight_policy: unweighted
+K_states: 1
+fep_shortlist_size: 1
+n_minima:
+  G1_reference_states: 1
+  G3_labelled_units: 30
+  G2b_actives: 100
+  G2b_decoys: 100
+  G4_actives: 100
+  G4_decoys: 100
+  G4_EF1_actives: 100
+  G4_EF1_decoys: 9900
+merge: {vote_fraction: 0.5, group_distance_A: 1.5}
+thresholds:
+  pharmflow_repository_dir: ../../pharmflow_repo
+  pharmflow_checkpoint_path: ../../pharmflow_repo/best-model-epoch=epoch=01.ckpt
+  pharmflow_samples_per_state: 1
+  pharmflow_timesteps: 10
+  gcpg_repository_dir: ../../cmdgen_repo
+  gcpg_model_path: ../../cmdgen_repo/GCPG/checkpoints/model_checkpoints/checkpoints/final_model.pth
+  gcpg_tokenizer_path: ../../cmdgen_repo/GCPG/checkpoints/model_checkpoints/checkpoints/tokenizer_r_iso.pkl
+  gcpg_device: cpu
+  docking_engine: vina
+  vina_executable: ../../bin/vina.exe
+  vina_exhaustiveness: 2
+  leakage_ecfp4_tanimoto: 0.70
+  leakage_pharmacophore_tanimoto: 0.80
+  leakage_pharmacophore_f1: 0.80
+  pharmacophore_match_distance_A: 1.0
+  seed_type: apo-seeded
+  seed_id: toy_seed
+  n_samples_per_seed: 3
+  sampling_temperature_K: 300
+  minimum_qc_pass_fraction: 0.80
+  maximum_clash_distance_A: 0.10
+  maximum_vdw_overlap_A: 0.4
+  maximum_pocket_rmsd_A: 2.0
+  maximum_energy_z: 3
+  pocket_cluster_distance_A: 1.5
+  minimum_reference_coverage: 0.90
+  reference_coverage_tolerance_A: 1.5
+  pocket_distance_weights: {element: 1.0}
+  pocket_distance_scales: {element: 1.0}
+  pocket_distance_lambda: 0.10
+  differential_presence_tolerance_A: 1.5
+  differential_minimum_score: 0.30
+  minimum_differential_ci_lower_bound: 0.0
+  g2b_minimum_ci_lower_bound: 0.0
+  bootstrap_replicates: 100
+  confidence_level: 0.95
+  g3_minimum_auc: 0.75
+  g3_maximum_p: 0.01
+  g4_minimum_auc_gain: 0.05
+  familywise_alpha: 0.05
+  generation_count_per_model: 4
+  generation_repeats: 1
+  conformer_count: 1
+  edge_distance_mode: euclidean_angstrom
+  max_unmatched_pharmacophore_points: 1
+  drop_structural_alerts: false
+  maximum_known_analog_similarity: 1.0
+  drop_known_scaffolds: false
+  drop_property_failures: false
+  mmgbsa_top_count: 2
+  minimum_fep_replicas: 3
+  potency_goal: 1000
+  assay_endpoint: IC50
+  assay_units: nM
+  md_replicas: 3
+  minimum_descriptive_n: 5
+  minimum_train_families: 10
+  minimum_held_out_families: 5
+  toy_demo_conformer_count: 10
+  toy_demo_broken_fraction: 0.30
+  toy_demo_label_count: 30
+  toy_demo_permutations: 200
+seed: 42

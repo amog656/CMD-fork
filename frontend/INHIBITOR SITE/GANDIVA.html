@@ -1,0 +1,1803 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GANDIVA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- 3Dmol.js Molecular Visualization Library for PDB Viewer -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.4/3Dmol-min.js"></script>
+
+<style>
+:root{--bg:#040506;--ink:#eef1f6;--dim:#8d96a6;--line:rgba(238,241,246,.16);--cy:#6ff3ff;--vi:#b44cff;--am:#ffb04a;
+color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{height:100%;scroll-behavior:smooth;scroll-padding-top:env(safe-area-inset-top,0px);overflow-y:auto;overflow-x:hidden}
+*,*::before,*::after{box-sizing:inherit}
+body{min-height:200vh;margin:0;background:var(--bg);color:var(--ink);font:400 1rem/1.5 "Hanken Grotesk",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+[hidden]{display:none!important}
+canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:pan-y;cursor:grab;z-index:1}
+canvas#gl:active{cursor:grabbing}
+.brand{position:fixed;left:4vw;top:max(1.6rem,env(safe-area-inset-top,0px));font:800 1.25rem/1 Syne,sans-serif;letter-spacing:-.01em;z-index:20}
+.nav{position:fixed;right:4vw;top:max(1.5rem,env(safe-area-inset-top,0px));display:flex;gap:1.8rem;z-index:20}
+.nav a{color:var(--dim);text-decoration:none;padding-bottom:.25rem;border-bottom:1px solid transparent;transition:color .2s,border-color .2s}
+.nav a:hover{color:var(--ink)}
+.nav a[aria-current=page]{color:var(--ink);border-color:var(--ink)}
+.nav a.off{opacity:.4}
+
+/* Page 1: Hero Section (Intro Only, No Inputs) */
+.page-hero{
+  height:100vh;
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  padding:0 6vw;
+  pointer-events:none;
+  z-index:10;
+}
+.page-hero>*{pointer-events:auto}
+.hero-content{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  max-width:58rem;
+  margin:0 auto;
+}
+.hero-title{
+  margin:0;
+  font:800 clamp(2.8rem,6.2vw,5.2rem)/1.04 Syne,sans-serif;
+  letter-spacing:-.035em;
+  word-break:keep-all;
+  overflow-wrap:normal;
+  white-space:normal;
+  text-shadow:0 4px 30px rgba(0,0,0,0.85);
+}
+.hero-sub{
+  margin:1.4rem auto 2.4rem;
+  max-width:52ch;
+  color:var(--dim);
+  font-size:clamp(1.05rem,1.8vw,1.22rem);
+  line-height:1.65;
+  text-shadow:0 2px 20px rgba(0,0,0,0.9);
+}
+.scroll-hint{
+  display:inline-flex;
+  align-items:center;
+  gap:.6rem;
+  color:var(--ink);
+  background:rgba(238,241,246,.08);
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:.75rem 1.6rem;
+  font-size:.95rem;
+  font-weight:500;
+  cursor:pointer;
+  text-decoration:none;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  transition:all .25s ease;
+  pointer-events:auto;
+}
+.scroll-hint:hover{
+  color:var(--cy);
+  border-color:var(--cy);
+  background:rgba(111,243,255,.12);
+  transform:translateY(2px);
+}
+.scroll-hint span{
+  display:inline-block;
+  animation:scrollBounce 1.6s infinite ease-in-out;
+}
+@keyframes scrollBounce{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(5px)}
+}
+
+/* Page 2: Lab Section (Input PDB & 3D Hologram) */
+.page-lab{
+  min-height:100vh;
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+  padding:14vh 4vw 9vh;
+  pointer-events:none;
+  z-index:10;
+}
+.page-lab>*{pointer-events:auto}
+
+.hero{position:relative;max-width:min(38rem,46vw);transition:opacity .5s cubic-bezier(.4,0,.2,1),transform .5s cubic-bezier(.4,0,.2,1)}
+
+/* During Docking Animation: make all text and UI disappear to highlight the 3D docking */
+body[data-phase=docking] .hero,
+body[data-phase=docking] .panel,
+body[data-phase=docking] .nav,
+body[data-phase=docking] .brand,
+body[data-phase=docking] .page-hero{
+  opacity:0!important;
+  pointer-events:none!important;
+  transform:translateY(16px);
+  transition:opacity .45s cubic-bezier(.4,0,.2,1),transform .45s cubic-bezier(.4,0,.2,1);
+}
+
+/* Post-docking non-overlapping layout: gives generous clearance for protein in center */
+body[data-phase=results] .hero,
+body[data-phase=docked] .hero{
+  max-width:min(25rem,28vw);
+}
+body[data-phase=results] .hero h1,
+body[data-phase=docked] .hero h1{
+  font-size:clamp(2.1rem,3.6vw,3.2rem);
+  letter-spacing:-.03em;
+}
+body[data-phase=results] .sub,
+body[data-phase=docked] .sub{
+  max-width:28ch;
+  font-size:.95rem;
+  line-height:1.5;
+}
+body[data-phase=results] .row,
+body[data-phase=docked] .row{
+  gap:.55rem;
+}
+body[data-phase=results] .btn,
+body[data-phase=docked] .btn{
+  padding:.65rem 1.25rem;
+  font-size:.88rem;
+}
+
+h1{margin:0;font:800 clamp(2rem,4.8vw,4rem)/1.02 Syne,sans-serif;letter-spacing:-.03em;transition:opacity .25s,transform .25s;word-break:keep-all;overflow-wrap:normal}
+body[data-phase=input] .hero h1{font-size:clamp(2.2rem,5.2vw,4.4rem)}
+h1.swap{opacity:0;transform:translateY(10px)}
+.sub{margin:1.1rem 0 1.5rem;max-width:42ch;color:var(--dim);font-size:1.02rem;min-height:2.6em;line-height:1.55}
+.row{display:flex;gap:.8rem;flex-wrap:wrap;align-items:center}
+.btn{font:500 .98rem "Hanken Grotesk",sans-serif;color:var(--ink);background:transparent;border:1px solid var(--ink);border-radius:999px;padding:.85rem 1.6rem;cursor:pointer;transition:background .2s,color .2s}
+.btn:hover{background:var(--ink);color:var(--bg)}
+.btn.main{background:var(--ink);color:var(--bg)}
+.btn.main:hover{background:var(--cy);border-color:var(--cy);color:var(--bg)}
+.btn:disabled{opacity:.45;pointer-events:none}
+.link{background:none;border:0;color:var(--dim);font:inherit;cursor:pointer;padding:.4rem .2rem;text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--line)}
+.link:hover{color:var(--ink)}
+
+.opts{flex:1 0 100%;display:grid;gap:1rem;max-width:30rem;margin-bottom:.8rem}
+.opts>div{display:grid;grid-template-columns:7rem 1fr;align-items:center;gap:.8rem;color:var(--dim)}
+.segs{display:flex;gap:.5rem}
+.seg{font:inherit;color:var(--dim);background:none;border:1px solid var(--line);border-radius:999px;padding:.35rem 1rem;cursor:pointer}
+.seg[aria-pressed=true]{color:var(--bg);background:var(--ink);border-color:var(--ink)}
+.opts input{font:inherit;color:var(--ink);background:none;border:0;border-bottom:1px solid var(--line);padding:.4rem 0;width:100%}
+.opts input:focus{outline:none;border-color:var(--cy)}
+
+.panel{position:fixed;right:3vw;top:15vh;bottom:9vh;width:min(19rem,24vw);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;z-index:15;transition:opacity .5s cubic-bezier(.4,0,.2,1),transform .5s cubic-bezier(.4,0,.2,1)}
+.panel h2{margin:0 0 .6rem;font:600 1rem Syne,sans-serif;color:var(--dim)}
+.cand{all:unset;display:block;cursor:pointer;padding:1rem 0 1rem 1rem;border-top:1px solid var(--line);position:relative;transition:padding .2s}
+.cand:focus-visible{outline:2px solid var(--cy);outline-offset:2px}
+.cand::before{content:"";position:absolute;left:0;top:1rem;bottom:1rem;width:2px;background:var(--cy);transform:scaleY(0);transition:transform .25s}
+.cand[aria-pressed=true]::before{transform:scaleY(1)}
+.cand .n{font:600 1.35rem Syne,sans-serif;letter-spacing:-.01em;color:var(--dim);transition:color .2s}
+.cand[aria-pressed=true] .n,.cand:hover .n{color:var(--ink)}
+.cand .m{display:flex;justify-content:space-between;align-items:center;gap:.75rem;color:var(--dim);font-size:.85rem;margin-top:.25rem;white-space:nowrap}
+.cand .m span:first-child{flex-shrink:0;font-family:"JetBrains Mono",monospace;font-weight:500}
+.cand .m span:last-child{flex-shrink:0;text-align:right}
+.bar{height:2px;background:var(--line);margin-top:.6rem}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--vi),var(--cy))}
+.foot{margin-top:auto;padding-top:1rem;border-top:1px solid var(--line)}
+.tag{color:var(--dim);font-size:.85rem}
+input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
+.drop{position:fixed;inset:0;display:grid;place-items:center;background:rgba(4,5,6,.8);font:800 clamp(2rem,6vw,5rem) Syne,sans-serif;letter-spacing:-.03em;z-index:30}
+.an{position:fixed;right:4vw;top:11vh;bottom:6vh;width:min(46rem,52vw);overflow:auto;padding-right:.5rem;z-index:15}
+.an h2{margin:0 0 1rem;font:800 clamp(2rem,4vw,3.4rem)/1 Syne,sans-serif;letter-spacing:-.03em}
+.an h3{margin:2.2rem 0 .8rem;font:600 1rem Syne,sans-serif;color:var(--dim)}
+.wrap{flex-wrap:wrap}
+.props{display:grid;grid-template-columns:repeat(auto-fill,minmax(9rem,1fr));margin-top:1.4rem}
+.props div{padding:.8rem 0;border-top:1px solid var(--line);display:grid}
+.props span{color:var(--dim);font-size:.85rem}
+.props b{font:600 1.15rem Syne,sans-serif;overflow-wrap:anywhere}
+.bt{display:grid;grid-template-columns:4rem 1fr 2rem;align-items:center;gap:.8rem;padding:.35rem 0}
+.bt i{display:block;height:2px;background:linear-gradient(90deg,var(--vi),var(--cy))}
+.bt b{font-weight:500;text-align:right}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th{font-weight:500;color:var(--dim);text-align:left;padding:.5rem .6rem .5rem 0;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg)}
+td{padding:.5rem .6rem .5rem 0;border-bottom:1px solid var(--line)}
+tr[data-i]{cursor:pointer}
+tr[data-i]:hover td{color:var(--cy)}
+tr.cur td{color:var(--ink)}
+tr:not(.cur) td{color:var(--dim)}
+.scroll{max-height:16rem;overflow:auto}
+.an pre{margin:1rem 0 0;padding:1rem;border:1px solid var(--line);border-radius:12px;max-height:18rem;overflow:auto;font:.8rem/1.45 ui-monospace,Menlo,monospace;color:var(--dim);user-select:text}
+.toast{position:fixed;left:50%;bottom:4vh;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:.6rem 1.2rem;border-radius:999px;z-index:40}
+@media(max-width:800px){.an{left:4vw;right:4vw;top:48vh;width:auto}}
+:focus-visible{outline:2px solid var(--cy);outline-offset:3px}
+@media(max-width:800px){
+ .panel{left:0;right:0;top:auto;bottom:0;width:auto;flex-direction:row;gap:1.2rem;padding:0 4vw 1rem;overflow-x:auto}
+ .panel h2,.foot{display:none}
+ .cand{flex:0 0 9.5rem;padding:.8rem 0}
+ .hero{bottom:12rem;max-width:100%}
+ body[data-phase=input] .hero,body[data-phase=ready] .hero,body[data-phase=busy] .hero{bottom:6vh}
+ body[data-phase=results] .hero,body[data-phase=docked] .hero{bottom:11.5rem;max-width:100%}
+}
+@media(prefers-reduced-motion:reduce){h1{transition:none}}
+
+/* ======================================================= */
+/* SCOPED PDB STRUCTURE VIEWER CSS (#pdb-viewer-root only) */
+/* ======================================================= */
+#pdb-viewer-root {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  z-index: 50;
+  background: #07090e;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+#pdb-viewer-root * {
+  box-sizing: border-box;
+}
+#pdb-viewer-root .pdb-viewport {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 4.2rem);
+  background: radial-gradient(circle at 60% 45%, #0f1422 0%, #06080d 85%);
+}
+#pdb-viewer-root .pdb-top-bar {
+  height: 4.2rem;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: rgba(14, 18, 28, 0.95);
+  border-bottom: 1px solid rgba(238, 241, 246, 0.12);
+  backdrop-filter: blur(12px);
+  z-index: 20;
+}
+#pdb-viewer-root .pdb-brand-group {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+#pdb-viewer-root .pdb-brand-title {
+  font: 800 1.15rem/1 "Syne", sans-serif;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #eef1f6 30%, #6ff3ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+#pdb-viewer-root .pdb-badge {
+  font: 600 0.7rem/1 "JetBrains Mono", monospace;
+  text-transform: uppercase;
+  color: #6ff3ff;
+  background: rgba(111, 243, 255, 0.12);
+  border: 1px solid rgba(111, 243, 255, 0.3);
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+}
+#pdb-viewer-root .pdb-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+#pdb-viewer-root .pdb-input-group {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(238, 241, 246, 0.16);
+  border-radius: 999px;
+  padding: 0.2rem 0.3rem 0.2rem 0.8rem;
+}
+#pdb-viewer-root .pdb-text-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #eef1f6;
+  font: 600 0.85rem "JetBrains Mono", monospace;
+  width: 5.2rem;
+  text-transform: uppercase;
+}
+#pdb-viewer-root .pdb-text-input::placeholder {
+  color: #8d96a6;
+  text-transform: none;
+  font-family: inherit;
+}
+#pdb-viewer-root .pdb-btn {
+  font: 500 0.85rem "Hanken Grotesk", sans-serif;
+  color: #eef1f6;
+  background: rgba(238, 241, 246, 0.08);
+  border: 1px solid rgba(238, 241, 246, 0.16);
+  border-radius: 999px;
+  padding: 0.45rem 0.95rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+#pdb-viewer-root .pdb-btn:hover {
+  background: rgba(238, 241, 246, 0.18);
+  border-color: rgba(238, 241, 246, 0.3);
+  color: #fff;
+}
+#pdb-viewer-root .pdb-btn-primary {
+  background: #6ff3ff;
+  border-color: #6ff3ff;
+  color: #040810;
+  font-weight: 600;
+}
+#pdb-viewer-root .pdb-btn-primary:hover {
+  background: #90f6ff;
+  border-color: #90f6ff;
+  box-shadow: 0 0 16px rgba(111, 243, 255, 0.4);
+}
+#pdb-viewer-root .pdb-btn-danger {
+  color: #ff5269;
+  background: rgba(255, 82, 105, 0.08);
+  border-color: rgba(255, 82, 105, 0.25);
+}
+#pdb-viewer-root .pdb-btn-danger:hover {
+  background: rgba(255, 82, 105, 0.2);
+  border-color: #ff5269;
+}
+#pdb-viewer-root .pdb-samples {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(238, 241, 246, 0.16);
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+}
+#pdb-viewer-root .pdb-samples-label {
+  font-size: 0.78rem;
+  color: #8d96a6;
+  margin-right: 0.2rem;
+}
+#pdb-viewer-root .pdb-btn-chip {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #eef1f6;
+  font: 600 0.75rem "JetBrains Mono", monospace;
+  border-radius: 999px;
+  padding: 0.22rem 0.55rem;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+#pdb-viewer-root .pdb-btn-chip:hover {
+  background: rgba(111, 243, 255, 0.15);
+  border-color: #6ff3ff;
+  color: #6ff3ff;
+}
+#pdb-viewer-root .pdb-panel-controls {
+  position: absolute;
+  top: 5.2rem;
+  left: 1.2rem;
+  width: min(19rem, calc(100vw - 2.4rem));
+  background: rgba(14, 18, 28, 0.88);
+  border: 1px solid rgba(238, 241, 246, 0.14);
+  border-radius: 16px;
+  padding: 1.1rem;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 15;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+  max-height: calc(100vh - 7rem);
+  overflow-y: auto;
+}
+#pdb-viewer-root .pdb-panel-controls h3 {
+  margin: 0 0 0.8rem;
+  font: 700 0.8rem/1 "Syne", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #8d96a6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+#pdb-viewer-root .pdb-ctrl-group { margin-bottom: 1rem; }
+#pdb-viewer-root .pdb-ctrl-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #8d96a6;
+  margin-bottom: 0.4rem;
+}
+#pdb-viewer-root .pdb-seg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(4.4rem, 1fr));
+  gap: 0.35rem;
+}
+#pdb-viewer-root .pdb-seg-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(238, 241, 246, 0.12);
+  color: #8d96a6;
+  border-radius: 8px;
+  padding: 0.4rem 0.3rem;
+  font: 500 0.78rem "Hanken Grotesk", sans-serif;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.18s ease;
+}
+#pdb-viewer-root .pdb-seg-btn:hover {
+  color: #eef1f6;
+  background: rgba(255, 255, 255, 0.08);
+}
+#pdb-viewer-root .pdb-seg-btn.active {
+  background: rgba(111, 243, 255, 0.12);
+  border-color: #6ff3ff;
+  color: #6ff3ff;
+  font-weight: 600;
+}
+#pdb-viewer-root .pdb-select-box {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(238, 241, 246, 0.14);
+  color: #eef1f6;
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+  font: 500 0.82rem "Hanken Grotesk", sans-serif;
+  outline: none;
+  cursor: pointer;
+}
+#pdb-viewer-root .pdb-checkbox-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.82rem;
+  cursor: pointer;
+  color: #eef1f6;
+}
+#pdb-viewer-root .pdb-checkbox-row input {
+  cursor: pointer;
+  accent-color: #6ff3ff;
+}
+#pdb-viewer-root .pdb-info-hud {
+  position: absolute;
+  bottom: 1.2rem;
+  right: 1.2rem;
+  width: min(23rem, calc(100vw - 2.4rem));
+  background: rgba(14, 18, 28, 0.9);
+  border: 1px solid rgba(238, 241, 246, 0.14);
+  border-radius: 16px;
+  padding: 1.1rem;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 15;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+}
+#pdb-viewer-root .pdb-info-title {
+  margin: 0;
+  font: 700 0.98rem/1.25 "Syne", sans-serif;
+  color: #eef1f6;
+  word-break: break-word;
+}
+#pdb-viewer-root .pdb-info-classification {
+  font: 600 0.72rem "JetBrains Mono", monospace;
+  color: #6ff3ff;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 0.2rem;
+}
+#pdb-viewer-root .pdb-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  text-align: center;
+  margin: 0.75rem 0;
+}
+#pdb-viewer-root .pdb-metric-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(238, 241, 246, 0.12);
+  border-radius: 8px;
+  padding: 0.45rem 0.25rem;
+}
+#pdb-viewer-root .pdb-metric-val {
+  font: 700 1.05rem/1 "JetBrains Mono", monospace;
+  color: #eef1f6;
+}
+#pdb-viewer-root .pdb-metric-lbl {
+  font-size: 0.7rem;
+  color: #8d96a6;
+  margin-top: 0.25rem;
+}
+#pdb-viewer-root .pdb-coord-audit {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+  font: 400 0.73rem/1.45 "JetBrains Mono", monospace;
+  color: #8d96a6;
+  max-height: 4.5rem;
+  overflow-y: auto;
+}
+#pdb-viewer-root .pdb-coord-audit b { color: #4ade80; }
+#pdb-viewer-root .pdb-toast {
+  position: absolute;
+  top: 4.8rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(20, 24, 36, 0.95);
+  border: 1px solid rgba(238, 241, 246, 0.18);
+  color: #eef1f6;
+  padding: 0.65rem 1.3rem;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  z-index: 50;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+}
+#pdb-viewer-root .pdb-toast.error { border-color: #ff5269; color: #ff94a2; }
+#pdb-viewer-root .pdb-toast.success { border-color: #4ade80; color: #a7f3d0; }
+#pdb-viewer-root .pdb-toast[hidden] { opacity: 0; transform: translate(-50%, -10px); }
+#pdb-viewer-root .pdb-drop-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(7, 9, 14, 0.88);
+  border: 3px dashed #6ff3ff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+#pdb-viewer-root .pdb-drop-overlay.active { opacity: 1; pointer-events: auto; }
+#pdb-viewer-root .pdb-drop-text {
+  font: 800 clamp(1.8rem, 4vw, 3rem) "Syne", sans-serif;
+  color: #6ff3ff;
+  text-shadow: 0 0 30px rgba(111, 243, 255, 0.5);
+}
+#pdb-viewer-root .pdb-drop-sub { color: #8d96a6; font-size: 1.05rem; margin-top: 0.4rem; }
+</style>
+</head>
+<body data-phase="input">
+<canvas id="gl" aria-label="3D view of the protein and candidate molecules"></canvas>
+<div class="brand">GANDIVA</div>
+<nav class="nav">
+  <a href="#input" id="n1" aria-current="page">Input</a>
+  <a href="#lab" id="n2" class="off">Lab</a>
+  <a href="#pdb" id="n4">PDB Viewer</a>
+  <a href="#analysis" id="n3" class="off">Analysis</a>
+</nav>
+
+<!-- ============================================== -->
+<!-- PAGE 1: HERO VIEW (Title & Info, No Inputs)   -->
+<!-- ============================================== -->
+<section class="page-hero" id="sec-hero">
+  <div class="hero-content">
+    <h1 class="hero-title">Target-Selective<br>Inhibitor Design.</h1>
+    <p class="hero-sub">AI-driven ensemble pharmacophore engineering to design high-affinity, selective small molecule inhibitors directly from 3D protein structures.</p>
+    <div>
+      <button class="scroll-hint" id="btn-scroll-down">Scroll down to input PDB <span>↓</span></button>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== -->
+<!-- PAGE 2: LAB VIEW (PDB Input & 3D Hologram)    -->
+<!-- ============================================== -->
+<section class="page-lab" id="sec-lab">
+  <div class="hero" data-show="input ready busy results docking docked">
+    <h1 id="title">Drop a protein.<br>Design inhibitors.</h1>
+    <p class="sub" id="sub">Upload a target PDB structure. GANDIVA reads pocket conformations to engineer high-affinity, selective candidate ligands.</p>
+    <div class="row">
+      <label class="btn main" data-show="input" for="pdbfile" tabindex="0">Choose PDB file</label>
+      <button class="btn" id="btn-open-pdb" type="button" data-show="input ready results docked" title="Inspect authentic 3D structure in 3Dmol viewer">View 3D PDB Structure</button>
+      <button class="link" id="sample" data-show="input">Sample: 7-Helix Bundle</button>
+      <button class="link" id="sample2" data-show="input">Sample: Beta-Hairpin</button>
+      <div class="opts" data-show="ready" hidden>
+        <div><span>Candidates</span><span class="segs"><button class="seg" data-n="6" aria-pressed="true">6</button><button class="seg" data-n="12" aria-pressed="false">12</button><button class="seg" data-n="24" aria-pressed="false">24</button></span></div>
+        <div><label for="site">Binding site</label><input id="site" placeholder="Auto, or x y z in Å" autocomplete="off"></div>
+      </div>
+      <button class="btn main" id="gen" data-show="ready" hidden>Generate candidates</button>
+      <button class="link" id="reset" data-show="ready" hidden>Use a different file</button>
+      <button class="btn main" id="dock" data-show="results docked">Dock candidate</button>
+      <button class="btn" id="analyse" data-show="results docked">Analyse</button>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<!-- INTEGRATED PDB VIEWER SCREEN (Scoped under #pdb-viewer-root)-->
+<!-- ========================================================== -->
+<section id="pdb-viewer-root" hidden>
+  <header class="pdb-top-bar">
+    <div class="pdb-brand-group">
+      <button class="pdb-btn" id="pdb-btn-back" type="button" title="Return to Design Lab">← Back to Lab</button>
+      <div class="pdb-brand-title">PDB Structure Viewer</div>
+      <div class="pdb-badge">3Dmol.js</div>
+    </div>
+
+    <div class="pdb-actions">
+      <!-- Quick Verification Samples -->
+      <div class="pdb-samples">
+        <span class="pdb-samples-label">Test PDBs:</span>
+        <button class="pdb-btn-chip" data-pdb="1CRN" type="button" title="Crambin (Helices & Sheet)">1CRN</button>
+        <button class="pdb-btn-chip" data-pdb="4HHB" type="button" title="Hemoglobin (4 Chains + Heme)">4HHB</button>
+        <button class="pdb-btn-chip" data-pdb="1UBQ" type="button" title="Ubiquitin">1UBQ</button>
+      </div>
+
+      <!-- Fetch Input -->
+      <div class="pdb-input-group">
+        <input type="text" id="pdb-id-input" class="pdb-text-input" placeholder="PDB ID..." maxlength="4" autocomplete="off" spellcheck="false">
+        <button class="pdb-btn pdb-btn-primary" id="pdb-btn-fetch" type="button">Fetch</button>
+      </div>
+
+      <!-- File Upload -->
+      <label class="pdb-btn" for="pdb-file-input" tabindex="0" title="Upload local .pdb, .cif, or .mmcif">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload File
+      </label>
+      <input type="file" id="pdb-file-input" accept=".pdb,.ent,.cif,.mmcif,.txt">
+
+      <!-- Reset -->
+      <button class="pdb-btn pdb-btn-danger" id="pdb-btn-clear" type="button">Reset</button>
+    </div>
+  </header>
+
+  <!-- Viewport -->
+  <div class="pdb-viewport" id="pdb-viewport-container"></div>
+
+  <!-- Controls Panel -->
+  <aside class="pdb-panel-controls">
+    <h3>
+      <span>Representation</span>
+      <span style="font-size:0.7rem; color:#6ff3ff; font-family:monospace;">3Dmol</span>
+    </h3>
+
+    <div class="pdb-ctrl-group" id="pdb-group-model" style="display: none;">
+      <label class="pdb-ctrl-label" for="pdb-select-model">NMR Model / Conformation</label>
+      <select id="pdb-select-model" class="pdb-select-box"></select>
+    </div>
+
+    <div class="pdb-ctrl-group">
+      <label class="pdb-ctrl-label">Structure Style</label>
+      <div class="pdb-seg-grid" id="pdb-rep-switcher">
+        <button class="pdb-seg-btn active" data-rep="cartoon" type="button">Cartoon</button>
+        <button class="pdb-seg-btn" data-rep="stick" type="button">Stick</button>
+        <button class="pdb-seg-btn" data-rep="sphere" type="button">Sphere</button>
+        <button class="pdb-seg-btn" data-rep="line" type="button">Line</button>
+        <button class="pdb-seg-btn" data-rep="surface" type="button">Surface</button>
+      </div>
+    </div>
+
+    <div class="pdb-ctrl-group">
+      <label class="pdb-ctrl-label">Color Coding</label>
+      <select id="pdb-select-color" class="pdb-select-box">
+        <option value="ss">Secondary Structure (Helix/Sheet/Loop)</option>
+        <option value="chain">Chain ID (Distinct per chain)</option>
+        <option value="amino">Residue Type (Shapely/Amino)</option>
+        <option value="spectrum">Rainbow Spectrum (N → C Terminus)</option>
+        <option value="bfactor">B-Factor (Crystallographic Temperature)</option>
+      </select>
+    </div>
+
+    <div class="pdb-ctrl-group">
+      <label class="pdb-ctrl-label">Components & Toggles</label>
+      <label class="pdb-checkbox-row">
+        <span>Show Ligands / HETATM (Sticks)</span>
+        <input type="checkbox" id="pdb-chk-ligands" checked>
+      </label>
+      <label class="pdb-checkbox-row">
+        <span>Show Water Molecules (HOH)</span>
+        <input type="checkbox" id="pdb-chk-waters">
+      </label>
+      <label class="pdb-checkbox-row">
+        <span>Auto-Rotate Structure</span>
+        <input type="checkbox" id="pdb-chk-spin">
+      </label>
+    </div>
+
+    <button class="pdb-btn" style="width:100%; justify-content:center;" id="pdb-btn-recenter" type="button">
+      Recenter / Zoom to Fit
+    </button>
+  </aside>
+
+  <!-- Info HUD -->
+  <aside class="pdb-info-hud" id="pdb-info-hud" style="display: none;">
+    <div>
+      <h4 class="pdb-info-title" id="pdb-info-title">Structure Title</h4>
+      <div class="pdb-info-classification" id="pdb-info-classification">HEADER RECORD</div>
+    </div>
+
+    <div class="pdb-metrics-grid">
+      <div class="pdb-metric-box">
+        <div class="pdb-metric-val" id="pdb-metric-atoms">0</div>
+        <div class="pdb-metric-lbl">Total Atoms</div>
+      </div>
+      <div class="pdb-metric-box">
+        <div class="pdb-metric-val" id="pdb-metric-residues">0</div>
+        <div class="pdb-metric-lbl">Residues</div>
+      </div>
+      <div class="pdb-metric-box">
+        <div class="pdb-metric-val" id="pdb-metric-chains">0</div>
+        <div class="pdb-metric-lbl">Chains</div>
+      </div>
+    </div>
+
+    <div class="pdb-coord-audit" id="pdb-coord-audit">
+      <b>Verified Ground Truth:</b><br>
+      <span id="pdb-coord-audit-line">No atom loaded.</span>
+    </div>
+  </aside>
+
+  <!-- Toast -->
+  <div class="pdb-toast" id="pdb-toast" hidden></div>
+
+  <!-- Drag-and-Drop Scrim (Attached strictly to #pdb-viewer-root) -->
+  <div class="pdb-drop-overlay" id="pdb-drop-overlay">
+    <div class="pdb-drop-text">Drop PDB or CIF File</div>
+    <div class="pdb-drop-sub">Release to parse authentic atomic coordinates</div>
+  </div>
+</section>
+
+<!-- ============================================== -->
+<!-- CANDIDATES PANEL & ANALYSIS VIEWS              -->
+<!-- ============================================== -->
+<aside class="panel" id="panel" data-show="results docking docked" hidden>
+  <h2>Candidates</h2>
+  <div id="list"></div>
+  <div class="foot"><span class="tag" id="tag">Sample output. Connect your pipeline to replace it.</span><br>
+    <button class="link" data-act="sdf">Download SDF</button> <button class="link" data-act="csv">Download CSV</button> <label class="link" for="sdffile" tabindex="0">Load SDF file</label></div>
+</aside>
+<section class="an" id="an" data-show="analysis" hidden>
+  <h2 id="anname"></h2>
+  <div class="segs wrap" id="chips"></div>
+  <div class="props" id="props"></div>
+  <h3>Bonds by type</h3><div id="bt"></div><p class="tag">Hydrogens are implicit and counted from valence.</p>
+  <h3>Every heavy-atom bond. Hover a row to find it on the molecule.</h3><div class="scroll"><table id="bl"></table></div>
+  <h3>All candidates</h3><div class="scroll"><table id="cmp"></table></div>
+  <h3>Text output</h3>
+  <div class="row"><button class="btn" data-act="copy">Copy SDF</button><button class="btn" data-act="one">Save this molecule</button><button class="btn" data-act="sdf">Save all SDF</button><button class="btn" data-act="csv">Save CSV</button></div>
+  <pre id="txt"></pre>
+  <p class="tag">SDF files save as .txt. Rename to .sdf to open them in your chemistry tools.</p>
+</section>
+<div class="toast" id="toast" hidden></div>
+<input type="file" id="pdbfile" accept=".pdb,.ent,.txt">
+<input type="file" id="sdffile" accept=".sdf,.mol">
+<div class="drop" id="drop" hidden>Drop to load</div>
+
+<!-- Three.js (for original site simulation and background world) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s), V3=THREE.Vector3;
+const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
+const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function gauss(r){return(r()+r()+r()+r()-2)/2}
+
+/* ---------- public hooks for the real pipeline ---------- */
+window.gandiva=window.apo2mol={
+  generate: async (pdbText, fileName, opts) => {
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdb: pdbText, name: fileName, options: opts })
+      });
+      if (res.ok) {
+        return await res.text();
+      }
+    } catch (e) {
+      console.warn('Backend API error:', e);
+    }
+    return null;
+  },
+  setPocket: p => { pocketA = p; }
+};
+let pocketA=null;
+
+/* ---------- renderer ---------- */
+const canvas=$('#gl');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(40,1,.1,50);
+const world=new THREE.Group(); scene.add(world);
+scene.add(new THREE.AmbientLight(0x8899bb,.8));
+const k1=new THREE.PointLight(0x6ff3ff,1.5,30); k1.position.set(4,3,5); scene.add(k1);
+const k2=new THREE.PointLight(0xb44cff,1.2,30); k2.position.set(-5,-2,3); scene.add(k2);
+
+/* ---------- particles (generative matter) ---------- */
+const N=9000, A=new Float32Array(N*3), B=new Float32Array(N*3), P=new Float32Array(N*3), seed=new Float32Array(N), col=new Float32Array(N*3);
+{const r=rng(7), c1=new THREE.Color(0x6ff3ff), c2=new THREE.Color(0xb44cff), c3=new THREE.Color(0xffffff);
+ for(let i=0;i<N;i++){const x=gauss(r)*2.4,y=gauss(r)*1.5,z=gauss(r)*1.5;
+  A[i*3]=x;A[i*3+1]=y+Math.sin(x*1.6)*.35;A[i*3+2]=z+Math.cos(x*1.2)*.3;
+  seed[i]=r(); const c=c1.clone().lerp(c2,r()*r()*1.3).lerp(c3,r()>.9?.6:0); col.set([c.r,c.g,c.b],i*3);}
+ P.set(A)}
+const pg=new THREE.BufferGeometry();
+pg.setAttribute('position',new THREE.BufferAttribute(P,3).setUsage(THREE.DynamicDrawUsage));
+pg.setAttribute('aSeed',new THREE.BufferAttribute(seed,1));
+pg.setAttribute('aCol',new THREE.BufferAttribute(col,3));
+const pu={uTime:{value:0},uSize:{value:3.1},uPx:{value:renderer.getPixelRatio()},uVis:{value:1}};
+const pts=new THREE.Points(pg,new THREE.ShaderMaterial({uniforms:pu,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
+vertexShader:`attribute float aSeed;attribute vec3 aCol;uniform float uTime,uSize,uPx;varying vec3 vC;varying float vA;
+void main(){vec3 p=position+.012*vec3(sin(uTime*.7+aSeed*40.),cos(uTime*.6+aSeed*23.),sin(uTime*.5+aSeed*31.));
+vec4 mv=modelViewMatrix*vec4(p,1.);gl_Position=projectionMatrix*mv;gl_PointSize=uSize*uPx*6./(-mv.z)*(.55+aSeed);vC=aCol;vA=.3+.7*aSeed;}`,
+fragmentShader:`uniform float uVis;varying vec3 vC;varying float vA;void main(){float d=length(gl_PointCoord-.5);if(d>.5)discard;float a=smoothstep(.5,.0,d);gl_FragColor=vec4(vC*(.6+a),a*a*vA*uVis);}`}));
+pts.frustumCulled=false; world.add(pts);
+let morph=0,morphT=0,lastMorph=-1,pv=1;
+
+/* ---------- hologram tubes ---------- */
+const tu={uTime:{value:0},uOp:{value:0},uPulse:{value:0},uVis:{value:1}};
+const tubeMat=new THREE.ShaderMaterial({uniforms:tu,transparent:true,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending,
+vertexShader:`varying vec3 vN,vV;varying float vU,vY;void main(){vN=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(position,1.);vV=-mv.xyz;vU=uv.x;vY=(modelMatrix*vec4(position,1.)).y;gl_Position=projectionMatrix*mv;}`,
+fragmentShader:`uniform float uTime,uOp,uPulse,uVis;varying vec3 vN,vV;varying float vU,vY;
+void main(){float f=pow(1.-abs(dot(normalize(vN),normalize(vV))),2.);
+vec3 ir=.5+.5*cos(6.28318*(f*1.1+vU*.9+uTime*.04+vec3(0.,.33,.67)));
+float sc=.85+.15*sin(vY*90.-uTime*2.);
+vec3 c=ir*(.3+f*1.5)*(1.+uPulse*1.6);gl_FragColor=vec4(c,(.25+f*.85)*uOp*uVis*sc);}`});
+const tubes=new THREE.Group(); world.add(tubes);
+
+/* ---------- PDB TO 3D CONVERTER & PARSER ---------- */
+function parsePDB(t){
+ const chains=new Map(),atoms=[],res=new Set();
+ const lines=t.split('\n');
+ for(const l of lines){
+  if(l.startsWith('ENDMDL'))break;
+  if(!l.startsWith('ATOM') && !l.startsWith('HETATM'))continue;
+  const resName=l.slice(17,20).trim();
+  if(['HOH','DOD','WAT'].includes(resName))continue;
+  const x=+l.slice(30,38),y=+l.slice(38,46),z=+l.slice(46,54);
+  if(isNaN(x+y+z))continue;
+  const alt=l[16]; if(alt&&alt!==' '&&alt!=='A')continue;
+  atoms.push(x,y,z);
+  const ch=(l[21]||'A').trim()||'A';
+  res.add(ch+l.slice(22,27));
+  const atomName=l.slice(12,16).trim();
+  if(atomName==='CA'){
+   if(!chains.has(ch))chains.set(ch,[]);
+   chains.get(ch).push(x,y,z);
+  }
+ }
+ if(!chains.size && atoms.length>=12){
+  const ch='A';
+  chains.set(ch,[]);
+  const step=Math.max(1,Math.floor(atoms.length/900));
+  for(let i=0;i<atoms.length;i+=3*step){
+   chains.get(ch).push(atoms[i],atoms[i+1],atoms[i+2]);
+  }
+ }
+ return{atoms,chains,nRes:res.size||Math.floor(atoms.length/24)};
+}
+
+function samplePDB(){
+ const L=[];let n=1;const f=v=>v.toFixed(3).padStart(8);
+ for(let h=0;h<7;h++){const a=h/7*Math.PI*2,cx=Math.cos(a)*9.5,cy=Math.sin(a)*9.5,dir=h%2?1:-1,ch='ABCDEFG'[h];
+  for(let i=0;i<30;i++){const t=i*100*Math.PI/180+h,z=(i-15)*1.5*dir,hx=cx+2.3*Math.cos(t),hy=cy+2.3*Math.sin(t);
+   const rad=[Math.cos(t),Math.sin(t)];
+   [['N',-.8,.6],['CA',0,0],['C',.9,-.5],['CB',0,1.5]].forEach(([nm,dz,rr])=>{
+    const x=hx+rad[0]*rr*(nm==='CB'?1:.3),y=hy+rad[1]*rr*(nm==='CB'?1:.3);
+    L.push('ATOM  '+String(n++).padStart(5)+' '+(' '+nm).padEnd(4)+' ALA '+ch+String(i+1).padStart(4)+'    '+f(x)+f(y)+f(z+dz)+'  1.00  0.00           '+nm[0])})}}
+ return L.join('\n')
+}
+
+function samplePDB2(){
+ const L=[];let n=1;const f=v=>v.toFixed(3).padStart(8);
+ for(let i=1;i<=6;i++)L.push('ATOM  '+String(n++).padStart(5)+'  CA  VAL A'+String(i).padStart(4)+'    '+f(0)+f((i-1)*3.4)+f(0)+'  1.00 20.00           C');
+ [[1.5,18.0,1.0],[3.2,18.5,0.0],[4.5,17.0,-1.0]].forEach((p,idx)=>L.push('ATOM  '+String(n++).padStart(5)+'  CA  GLY A'+String(7+idx).padStart(4)+'    '+f(p[0])+f(p[1])+f(p[2])+'  1.00 20.00           C'));
+ for(let i=10;i<=15;i++)L.push('ATOM  '+String(n++).padStart(5)+'  CA  ILE A'+String(i).padStart(4)+'    '+f(4.8)+f(17.0-(i-10)*3.4)+f(0)+'  1.00 20.00           C');
+ [[6.0,0.0,1.5],[7.5,1.5,3.0],[8.0,3.5,4.0]].forEach((p,idx)=>L.push('ATOM  '+String(n++).padStart(5)+'  CA  PRO A'+String(16+idx).padStart(4)+'    '+f(p[0])+f(p[1])+f(p[2])+'  1.00 20.00           C'));
+ for(let i=19;i<=32;i++){const theta=(i-19)*100*Math.PI/180;L.push('ATOM  '+String(n++).padStart(5)+'  CA  LEU A'+String(i).padStart(4)+'    '+f(8.0+2.3*Math.cos(theta))+f(3.5+(i-19)*1.5)+f(4.0+2.3*Math.sin(theta))+'  1.00 20.00           C');}
+ return L.join('\n');
+}
+
+let S=1, pocket=new V3(), info=null, pdbText='', fileName='', cen=[0,0,0], opts={n:6};
+
+function loadProtein(text,name){
+ const d=parsePDB(text); if(d.atoms.length<20||!d.chains.size)return false;
+ pdbText=text;fileName=name;
+ const n=d.atoms.length/3,c=[0,0,0];cen=c;
+ for(let i=0;i<n;i++)for(let k=0;k<3;k++)c[k]+=d.atoms[i*3+k]/n;
+ let R=0;for(let i=0;i<n;i++){const dx=d.atoms[i*3]-c[0],dy=d.atoms[i*3+1]-c[1],dz=d.atoms[i*3+2]-c[2];R=Math.max(R,Math.hypot(dx,dy,dz))}
+ S=1.7/R;
+ const to=(x,y,z)=>new V3((x-c[0])*S,(y-c[1])*S,(z-c[2])*S);
+
+ while(tubes.children.length){const m=tubes.children.pop();m.geometry.dispose()}
+ let nCA=0;d.chains.forEach(a=>nCA+=a.length/3);
+ d.chains.forEach(a=>{
+  let seg=[];
+  const flush=()=>{
+   if(seg.length>=3){
+    const cv=new THREE.CatmullRomCurve3(seg);
+    const segCount=Math.max(12,seg.length*(nCA>2500?2:4));
+    tubes.add(new THREE.Mesh(new THREE.TubeGeometry(cv,segCount,Math.max(.022,.95*S),12),tubeMat));
+   }
+   seg=[];
+  };
+  for(let i=0;i<a.length;i+=3){
+   if(i && Math.hypot(a[i]-a[i-3],a[i+1]-a[i-2],a[i+2]-a[i-1])>5.2)flush();
+   seg.push(to(a[i],a[i+1],a[i+2]));
+  }
+  flush();
+ });
+
+ const r=rng(3);
+ for(let i=0;i<N;i++){
+  const j=Math.floor(r()*n);
+  const p=to(d.atoms[j*3],d.atoms[j*3+1],d.atoms[j*3+2]);
+  B[i*3]=p.x+gauss(r)*.04;
+  B[i*3+1]=p.y+gauss(r)*.04;
+  B[i*3+2]=p.z+gauss(r)*.04;
+ }
+
+ pocket=pocketA?to(...pocketA):new V3();
+ info={nRes:d.nRes,nCh:d.chains.size,nAt:n};
+ return true;
+}
+
+/* ---------- molecules ---------- */
+const EL={C:[0xcfd8e3,.38],N:[0x4f8cff,.36],O:[0xff4d5e,.34],S:[0xffd23f,.5],F:[0x7be0a0,.3],Cl:[0x39d17a,.48]};
+const sphereG=new THREE.SphereGeometry(1,20,14), cylG=new THREE.CylinderGeometry(1,1,1,10,1);
+const elM={};const mat=(el)=>elM[el]||(elM[el]=new THREE.MeshStandardMaterial({color:(EL[el]||EL.C)[0],emissive:(EL[el]||EL.C)[0],emissiveIntensity:.2,roughness:.3}));
+const bondM=new THREE.MeshStandardMaterial({color:0x9aa6b6,emissive:0x445066,emissiveIntensity:.3,roughness:.4});
+function buildMol(m){
+ const g=new THREE.Group();
+ m.atoms.forEach(a=>{const s=new THREE.Mesh(sphereG,mat(a.el));s.scale.setScalar((EL[a.el]||EL.C)[1]);s.position.set(...a.p);g.add(s)});
+ m.bonds.forEach(([i,j,o])=>{const p=new V3(...m.atoms[i].p),q=new V3(...m.atoms[j].p),d=q.clone().sub(p),b=new THREE.Mesh(cylG,bondM);
+  b.position.copy(p).add(q).multiplyScalar(.5);b.scale.set(o>1?.12:.08,d.length(),o>1?.12:.08);
+  b.quaternion.setFromUnitVectors(new V3(0,1,0),d.normalize());b.userData.w=o>1?.12:.08;(g.userData.bonds||(g.userData.bonds=[])).push(b);g.add(b)});
+ g.scale.setScalar(S*1.5);return g;
+}
+function makeMol(seed){
+ const R=rng(seed),atoms=[],bonds=[];
+ const add=(el,x,y,z)=>atoms.push({el,p:[x,y,z]})-1;
+ const ring=(cx,rot,het)=>{const ix=[];for(let k=0;k<6;k++){const a=rot+k*Math.PI/3;ix.push(add(k===het?'N':'C',cx+1.4*Math.cos(a),1.4*Math.sin(a),(R()-.5)*.2))}
+  for(let k=0;k<6;k++)bonds.push([ix[k],ix[(k+1)%6],k%2?2:1]);return ix};
+ const mode=Math.floor(R()*3), A1=ring(0,0,R()>.6?2:-1); let B1=null,skip=[A1[0]],cB=0;
+ if(mode===1){cB=4.3;B1=ring(cB,Math.PI,R()>.5?1:-1);bonds.push([A1[0],B1[3],1]);skip.push(B1[3])}
+ if(mode===2){const x=add(['N','O','C','S'][Math.floor(R()*4)],2.9,.5,.4);cB=5.7;B1=ring(cB,Math.PI,-1);bonds.push([A1[0],x,1],[x,B1[3],1]);skip.push(B1[3])}
+ [[A1,0],[B1,cB]].forEach(([rg,cx])=>{if(!rg)return;rg.forEach(i=>{if(skip.includes(i)||R()>.4)return;
+  const a=atoms[i].p,dx=a[0]-cx,dy=a[1],l=Math.hypot(dx,dy),el=['O','N','F','Cl','S','C'][Math.floor(R()*6)];
+  const j=add(el,a[0]+dx/l*1.4,a[1]+dy/l*1.4,(R()-.5)*1.2);bonds.push([i,j,el==='O'&&R()>.5?2:1]);
+  if((el==='O'||el==='N')&&R()>.55){const b=atoms[j].p,k=add('C',b[0]+dx/l*1.3,b[1]+dy/l*1.3,b[2]+(R()-.5)*1.4);bonds.push([j,k,1])}})});
+ const c=[0,0,0];atoms.forEach(a=>a.p.forEach((v,k)=>c[k]+=v/atoms.length));atoms.forEach(a=>a.p=a.p.map((v,k)=>v-c[k]));
+ const aff=-(6.8+R()*3.4),q=.45+R()*.45;
+ return{name:'APO-'+String(Math.floor(100+R()*899)).padStart(4,'0'),atoms,bonds,aff,q}
+}
+function parseSDF(t){
+ return t.split('$$$$').map(b=>b.replace(/\r/g,'').split('\n')).filter(l=>l.length>4&&/V2000/.test(l[3])).map((l,i)=>{
+  const na=+l[3].slice(0,3),nb=+l[3].slice(3,6),atoms=[],bonds=[],pr={};
+  for(let k=0;k<na;k++){const s=l[4+k];atoms.push({el:s.slice(31,34).trim(),p:[+s.slice(0,10),+s.slice(10,20),+s.slice(20,30)]})}
+  for(let k=0;k<nb;k++){const s=l[4+na+k];bonds.push([+s.slice(0,3)-1,+s.slice(3,6)-1,+s.slice(6,9)])}
+  l.forEach((s,k)=>{const m=s.match(/^>\s+<(\w+)>/);if(m)pr[m[1].toLowerCase()]=parseFloat(l[k+1])});
+  const c=[0,0,0];atoms.forEach(a=>a.p.forEach((v,q)=>c[q]+=v/na));atoms.forEach(a=>a.p=a.p.map((v,q)=>v-c[q]));
+  return{name:l[0].trim()||'Candidate '+(i+1),atoms,bonds,aff:pr.affinity??pr.score??NaN,q:pr.qed??.6}})
+}
+
+/* ---------- chemistry + text output ---------- */
+const VAL={C:4,N:3,O:2,S:2,F:1,Cl:1},MASS={C:12.011,H:1.008,N:14.007,O:15.999,S:32.06,F:18.998,Cl:35.45},RK={C:0,N:1,O:2,S:3,F:4,Cl:5,H:9};
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function chem(m){
+ if(m.ch)return m.ch;
+ const n=m.atoms.length,bs=Array(n).fill(0),adj=Array.from({length:n},()=>[]);
+ m.bonds.forEach(([i,j,o],k)=>{bs[i]+=o;bs[j]+=o;adj[i].push([j,k]);adj[j].push([i,k])});
+ const h=m.atoms.map((a,i)=>Math.max(0,(VAL[a.el]??4)-bs[i])),cnt={};
+ m.atoms.forEach(a=>cnt[a.el]=(cnt[a.el]||0)+1);const H=h.reduce((a,b)=>a+b,0);if(H)cnt.H=H;
+ const els=['C','H',...Object.keys(cnt).filter(e=>e!=='C'&&e!=='H').sort()].filter(e=>cnt[e]);
+ const key=(a,b,o)=>(RK[a]<=RK[b]?[a,b]:[b,a]).join(o>1?'=':'–'),bt={},bl=[];
+ const ring=(s,t,k)=>{const seen=new Set([s]),q=[s];while(q.length){const u=q.pop();for(const[v,e]of adj[u]){if(e===k||seen.has(v))continue;if(v===t)return true;seen.add(v);q.push(v)}}return false};
+ let rot=0;
+ m.bonds.forEach(([i,j,o],k)=>{const a=m.atoms[i],b=m.atoms[j],kk=key(a.el,b.el,o);bt[kk]=(bt[kk]||0)+1;
+  bl.push({l:a.el+(i+1)+(o>1?'=':'–')+b.el+(j+1),o,d:Math.hypot(a.p[0]-b.p[0],a.p[1]-b.p[1],a.p[2]-b.p[2])});
+  if(o===1&&adj[i].length>1&&adj[j].length>1&&!ring(i,j,k))rot++});
+ m.atoms.forEach((a,i)=>{if(h[i]){const kk=key(a.el,'H',1);bt[kk]=(bt[kk]||0)+h[i]}});
+ const isNO=a=>a.el==='N'||a.el==='O';
+ return m.ch={formula:els.map(e=>e+(cnt[e]>1?cnt[e]:'')).join(''),mw:els.reduce((s,e)=>s+(MASS[e]||0)*cnt[e],0),heavy:n,
+  rings:Math.max(0,m.bonds.length-n+1),rot,hbd:m.atoms.filter((a,i)=>isNO(a)&&h[i]).length,hba:m.atoms.filter(isNO).length,
+  bt:Object.entries(bt).sort((a,b)=>b[1]-a[1]),bl}
+}
+function toSDF(m){const f=v=>v.toFixed(4).padStart(10),c=chem(m);
+ let s=m.name+'\n  GANDIVA\n\n'+String(m.atoms.length).padStart(3)+String(m.bonds.length).padStart(3)+'  0  0  0  0  0  0  0  0999 V2000\n';
+ m.atoms.forEach(a=>s+=f(a.p[0])+f(a.p[1])+f(a.p[2])+' '+a.el.padEnd(3)+' 0  0  0  0  0  0  0  0  0  0  0  0\n');
+ m.bonds.forEach(b=>s+=String(b[0]+1).padStart(3)+String(b[1]+1).padStart(3)+String(b[2]).padStart(3)+'  0\n');
+ s+='M  END\n';const P={formula:c.formula,mass:c.mw.toFixed(2),affinity:isNaN(m.aff)?'':m.aff.toFixed(2),qed:m.q.toFixed(2)};
+ for(const k in P)if(P[k]!=='')s+='> <'+k+'>\n'+P[k]+'\n\n';return s+'$$$$\n'}
+function toCSV(){return 'name,formula,mass_da,affinity_kcal_mol,qed,hbd,hba,rotatable_bonds,rings\n'+cands.map(m=>{const c=chem(m);return[m.name,c.formula,c.mw.toFixed(2),isNaN(m.aff)?'':m.aff.toFixed(2),m.q.toFixed(2),c.hbd,c.hba,c.rot,c.rings].join(',')}).join('\n')+'\n'}
+function toast(t){const e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,2600)}
+function downloadBlob(text, filename, type='text/plain'){
+ const blob=new Blob([text],{type});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');
+ a.href=url; a.download=filename; a.click();
+ URL.revokeObjectURL(url);
+ toast('Downloaded '+filename);
+}
+document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');if(!a||!cands.length)return;const m=cands[sel<0?0:sel],t=a.dataset.act;
+ if(t==='sdf')downloadBlob(cands.map(toSDF).join(''),'gandiva-candidates.sdf');
+ if(t==='csv')downloadBlob(toCSV(),'gandiva-candidates.csv');
+ if(t==='one')downloadBlob(toSDF(m),m.name+'.sdf');
+ if(t==='copy'){
+   navigator.clipboard.writeText(toSDF(m)).then(()=>toast('Copied.')).catch(()=>{
+     const ta=document.createElement('textarea');ta.value=toSDF(m);document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('Copied.');
+   });
+ }
+});
+const hiM=new THREE.MeshStandardMaterial({color:0x6ff3ff,emissive:0x6ff3ff,emissiveIntensity:.8});
+function hl(i,on){const b=lig&&lig.userData.bonds&&lig.userData.bonds[i];if(!b)return;b.material=on?hiM:bondM;b.scale.x=b.scale.z=b.userData.w*(on?2.4:1)}
+function renderAnalysis(){
+ const m=cands[sel],c=chem(m),g=id=>document.getElementById(id);
+ g('anname').textContent=m.name;
+ g('chips').innerHTML=cands.map((x,i)=>`<button class="seg" data-i="${i}" aria-pressed="${i===sel}">${esc(x.name)}</button>`).join('');
+ g('chips').querySelectorAll('button').forEach(b=>b.onclick=()=>pick(+b.dataset.i));
+ const P=[['Formula',c.formula],['Mass',c.mw.toFixed(1)+' Da'],['Heavy atoms',c.heavy],['Rings',c.rings],['Rotatable bonds',c.rot],['H-bond donors',c.hbd],['H-bond acceptors',c.hba],['Affinity',isNaN(m.aff)?'n/a':m.aff.toFixed(1)+' kcal/mol']];
+ g('props').innerHTML=P.map(([k,v])=>`<div><span>${k}</span><b>${esc(v)}</b></div>`).join('');
+ const mx=Math.max(1,...c.bt.map(x=>x[1]));
+ g('bt').innerHTML=c.bt.map(([k,v])=>`<div class="bt"><span>${k}</span><i style="width:${v/mx*100}%"></i><b>${v}</b></div>`).join('');
+ g('bl').innerHTML='<tr><th>Bond</th><th>Order</th><th>Length</th></tr>'+c.bl.map((b,i)=>`<tr data-i="${i}" class="cur"><td>${b.l}</td><td>${['','single','double','triple'][b.o]||b.o}</td><td>${b.d.toFixed(2)} Å</td></tr>`).join('');
+ g('bl').querySelectorAll('tr[data-i]').forEach(r=>{const i=+r.dataset.i;r.onmouseenter=()=>hl(i,true);r.onmouseleave=()=>hl(i,false)});
+ g('cmp').innerHTML='<tr><th>Candidate</th><th>Affinity</th><th>Mass</th><th>Donors</th><th>Acceptors</th><th>Rotatable</th><th>Rings</th><th>Rule of five</th></tr>'+cands.map((x,i)=>{const k=chem(x);return `<tr data-i="${i}" class="${i===sel?'cur':''}"><td>${esc(x.name)}</td><td>${isNaN(x.aff)?'n/a':x.aff.toFixed(1)}</td><td>${k.mw.toFixed(0)}</td><td>${k.hbd}</td><td>${k.hba}</td><td>${k.rot}</td><td>${k.rings}</td><td>${k.mw<500&&k.hbd<=5&&k.hba<=10?'Pass':'Fail'}</td></tr>`}).join('');
+ g('cmp').querySelectorAll('tr[data-i]').forEach(r=>r.onclick=()=>pick(+r.dataset.i));
+ g('txt').textContent=toSDF(m)
+}
+
+/* ---------- state + UI ---------- */
+let phase='input',cands=[],sel=-1,lig=null,dockA=null;
+const title=$('#title'),sub=$('#sub');
+function setText(t,s){title.classList.add('swap');setTimeout(()=>{title.innerHTML=t;title.classList.remove('swap')},reduce?0:220);sub.textContent=s}
+function setPhase(p){phase=p;document.body.dataset.phase=p;document.querySelectorAll('[data-show]').forEach(e=>e.hidden=!e.dataset.show.split(' ').includes(p))}
+
+function scrollToLab(){
+ const labSec=$('#sec-lab');
+ if(labSec) labSec.scrollIntoView({behavior:'smooth'});
+}
+$('#btn-scroll-down').onclick=scrollToLab;
+
+function begin(text,name){
+ if(!loadProtein(text,name)){sub.textContent='No atoms found. Choose a .pdb file with ATOM records.';return}
+ morphT=1;cands=[];sel=-1;dockA=null;if(lig){world.remove(lig);lig=null}
+ setPhase('ready');
+ scrollToLab();
+ if(location.hash!=='#input')location.hash='input';navState();
+ setText(name.replace(/\.\w+$/,'').replace(/[<>&]/g,'')||'Structure',`${info.nRes} residues, ${info.nCh} chain${info.nCh>1?'s':''}, ${info.nAt.toLocaleString()} atoms. Drag to turn it.`);
+}
+
+$('#pdbfile').onchange=e=>{const f=e.target.files[0];if(f)f.text().then(t=>begin(t,f.name));e.target.value=''};
+$('#sample').onclick=()=>begin(samplePDB(),'7-Helix Bundle');
+$('#sample2').onclick=()=>begin(samplePDB2(),'Beta-Hairpin Motif');
+$('#reset').onclick=()=>{
+ morphT=0;if(lig){world.remove(lig);lig=null}cands=[];sel=-1;dockA=null;tu.uOp.value=0;info=null;
+ setPhase('input');location.hash='input';navState();
+ setText('Drop a protein.<br>Design inhibitors.','Upload a target PDB structure. GANDIVA reads pocket conformations to engineer high-affinity, selective candidate ligands.');
+ window.scrollTo({top:0,behavior:'smooth'});
+};
+
+addEventListener('dragover',e=>{
+ if(e.target.closest('#pdb-viewer-root')) return;
+ e.preventDefault();
+ $('#drop').hidden=false;
+});
+addEventListener('dragleave',e=>{if(!e.relatedTarget)$('#drop').hidden=true});
+addEventListener('drop',e=>{
+ if(e.target.closest('#pdb-viewer-root')) return;
+ e.preventDefault();$('#drop').hidden=true;const f=e.dataTransfer.files[0];if(!f)return;
+ f.text().then(t=>/\$\$\$\$|V2000/.test(t)&&info?(setCands(parseSDF(t),true),cands.length&&location.hash!=='#lab'&&(location.hash='lab')):begin(t,f.name));
+});
+
+$('#sdffile').onchange=e=>{const f=e.target.files[0];if(f)f.text().then(t=>setCands(parseSDF(t),true));e.target.value=''};
+document.querySelectorAll('label[for]').forEach(l=>l.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();l.click()}});
+
+let running=false;
+$('#gen').onclick=()=>{location.hash='lab'};
+$('#analyse').onclick=()=>{location.hash='analysis'};
+document.querySelectorAll('.seg').forEach(b=>b.onclick=()=>{opts.n=+b.dataset.n;document.querySelectorAll('.seg').forEach(x=>x.setAttribute('aria-pressed',x===b))});
+
+async function runGen(){
+ running=true;setPhase('busy');
+ const m=($('#site').value.match(/-?\d+(\.\d+)?/g)||[]).map(Number);
+ if(m.length>=3)pocket=new V3((m[0]-cen[0])*S,(m[1]-cen[1])*S,(m[2]-cen[2])*S);
+ const steps=['Reading the binding pocket.','Proposing molecules.','Scoring poses.'];let i=0;
+ setText('Finding molecules.',steps[0]);
+ const iv=setInterval(()=>sub.textContent=steps[++i%3],1100);
+ try{
+  let list;
+  if(typeof window.apo2mol.generate==='function'){
+    const sdfResult = await window.apo2mol.generate(pdbText,fileName,{count:opts.n,site:m.length>=3?m.slice(0,3):null});
+    if(sdfResult && /\$\$\$\$|V2000/.test(sdfResult)){
+      list = parseSDF(sdfResult);
+    }
+  }
+  if(!list || !list.length){
+    await new Promise(r=>setTimeout(r,3300));
+    list=Array.from({length:opts.n},(_,i)=>makeMol(11+i*37)).sort((a,b)=>a.aff-b.aff);
+    $('#tag').hidden=false;
+  }
+  clearInterval(iv);running=false;setCands(list,false);
+ }catch(err){clearInterval(iv);running=false;location.hash='input';setTimeout(()=>sub.textContent='Generation failed. Check the pipeline and try again.',400)}
+}
+
+function intro(){setText(fileName.replace(/\.\w+$/,'').replace(/[<>&]/g,'')||'Structure',`${info.nRes} residues, ${info.nCh} chain${info.nCh>1?'s':''}, ${info.nAt.toLocaleString()} atoms. Drag to turn it.`)}
+
+function navState(){
+ const h=location.hash.slice(1),pg=h==='lab'||h==='analysis'||h==='pdb'?h:'input';
+ $('#n1').setAttribute('aria-current',pg==='input'?'page':'false');
+ $('#n2').setAttribute('aria-current',pg==='lab'?'page':'false');
+ $('#n4').setAttribute('aria-current',pg==='pdb'?'page':'false');
+ $('#n3').setAttribute('aria-current',pg==='analysis'?'page':'false');
+ $('#n2').classList.toggle('off',!info);
+ $('#n3').classList.toggle('off',!cands.length);
+ return pg;
+}
+
+function route(){
+ const pg=navState();
+ const pdbRoot = $('#pdb-viewer-root');
+ if(pg==='pdb'){
+   pdbRoot.hidden = false;
+   pdbRoot.scrollIntoView({behavior:'smooth'});
+   ensurePdbViewer();
+   return;
+ } else {
+   pdbRoot.hidden = true;
+ }
+
+ if(pg!=='input'&&!info){location.hash='input';return}
+ if(pg==='analysis'){
+  if(!cands.length){location.hash='lab';return}
+  dockA=null;setPhase('analysis');pick(sel<0?0:sel)
+ }else if(pg==='lab'){
+  scrollToLab();
+  if(cands.length)showResults();else if(running)setPhase('busy');else runGen()
+ }else if(info&&phase!=='ready'){dockA=null;if(lig){world.remove(lig);lig=null}setPhase('ready');intro()}
+}
+addEventListener('hashchange',route);
+
+function setCands(list,fromFile){
+ if(!list.length){sub.textContent='No molecules found in that file.';return}
+ cands=list;sel=-1;if(fromFile)$('#tag').textContent='Loaded from file.';navState();
+ const el=$('#list');el.innerHTML='';
+ cands.forEach((c,i)=>{const b=document.createElement('button');b.className='cand';b.setAttribute('aria-pressed','false');
+  const a=isNaN(c.aff)?'':c.aff.toFixed(1)+' kcal/mol';
+  b.innerHTML=`<div class="n"></div><div class="m"><span>${a}</span><span>${Math.round(c.q*100)}% drug-like</span></div><div class="bar"><i style="width:${Math.round(c.q*100)}%"></i></div>`;
+  b.firstChild.textContent=c.name;b.onclick=()=>pick(i);el.appendChild(b)});
+ if(location.hash==='#lab')showResults()
+}
+
+function showResults(){setPhase('results');setText(cands.length+' candidates.','Pick one to inspect, then dock it.');pick(sel<0?0:sel)}
+function previewPos(){return innerWidth>800?new V3(1.9,.55,.3):new V3(0,-2.1,.4)}
+
+function pick(i){
+ if(dockA)return;sel=i;
+ document.querySelectorAll('.cand').forEach((b,k)=>b.setAttribute('aria-pressed',k===i));
+ if(lig){world.remove(lig)}lig=buildMol(cands[i]);lig.scale.setScalar(S*3.2);lig.position.set(0,0,0);world.add(lig);
+ if(phase==='docked'){setPhase('results');setText(cands.length+' candidates.','Pick one to inspect, then dock it.')}
+ $('#dock').textContent='Dock '+cands[i].name;if(phase==='analysis')renderAnalysis()
+}
+
+$('#dock').onclick=()=>{
+ if(!lig||dockA)return;
+ const s=lig.position.clone(),e=pocket.clone();
+ dockA={t0:performance.now(),dur:reduce?500:3800,s,e,m:previewPos().multiplyScalar(1.2),sc0:lig.scale.x,q0:lig.quaternion.clone(),q1:new THREE.Quaternion().setFromEuler(new THREE.Euler(.5,1,.2))};
+ setPhase('docking');sub.textContent='Docking '+cands[sel].name+'.'
+};
+
+/* ---------- classic molecular binding particle shimmer ---------- */
+let burstGroup = null, burstLight = null;
+const burstMat = new THREE.ShaderMaterial({
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+  uniforms: {
+    uPx: { value: renderer.getPixelRatio() },
+    uOp: { value: 1.0 },
+    uSize: { value: 3.2 }
+  },
+  vertexShader: `
+    attribute vec3 aCol;
+    attribute float aSeed;
+    uniform float uPx, uSize, uOp;
+    varying vec3 vCol;
+    varying float vAlpha;
+    void main(){
+      vCol = aCol;
+      vAlpha = uOp * (0.6 + 0.4 * sin(aSeed * 30.0));
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      gl_PointSize = max(1.2, uSize * uPx * 4.5 / (-mv.z) * (0.4 + 0.6 * aSeed));
+      gl_Position = projectionMatrix * mv;
+    }
+  `,
+  fragmentShader: `
+    varying vec3 vCol;
+    varying float vAlpha;
+    void main(){
+      float d = length(gl_PointCoord - vec2(0.5));
+      if(d > 0.5) discard;
+      float core = smoothstep(0.5, 0.0, d);
+      float glow = exp(-d * 4.5);
+      gl_FragColor = vec4(vCol * (core * 0.9 + glow * 0.5), vAlpha * glow);
+    }
+  `
+});
+
+function burst(){
+ if(burstGroup){scene.remove(burstGroup);burstGroup.traverse(o=>{if(o.geometry)o.geometry.dispose()});burstGroup=null;}
+ if(burstLight){scene.remove(burstLight);burstLight=null;}
+
+ burstGroup = new THREE.Group();
+ const pos = world.localToWorld(pocket.clone());
+ burstGroup.position.copy(pos);
+
+ const pCount = 180;
+ const pPos = new Float32Array(pCount * 3);
+ const pVel = new Float32Array(pCount * 3);
+ const pCol = new Float32Array(pCount * 3);
+ const pSeed = new Float32Array(pCount);
+ const rRng = rng(Math.floor(performance.now()));
+ const cWhite = new THREE.Color(0xffffff), cIce = new THREE.Color(0xa0f4ff), cCyan = new THREE.Color(0x6ff3ff), cViolet = new THREE.Color(0xb44cff);
+
+ for(let i = 0; i < pCount; i++){
+   pPos[i*3] = 0; pPos[i*3+1] = 0; pPos[i*3+2] = 0;
+   pSeed[i] = rRng();
+   const theta = rRng() * Math.PI * 2;
+   const phi = Math.acos(2 * rRng() - 1);
+   const spd = (0.6 + rRng() * 1.5) * (i < 40 ? 1.35 : 0.85);
+   pVel[i*3] = Math.sin(phi) * Math.cos(theta) * spd;
+   pVel[i*3+1] = Math.sin(phi) * Math.sin(theta) * spd;
+   pVel[i*3+2] = Math.cos(phi) * spd;
+   const c = i < 60 ? cWhite.clone().lerp(cIce, rRng() * 0.5) : (i < 130 ? cIce.clone().lerp(cCyan, rRng() * 0.7) : cCyan.clone().lerp(cViolet, rRng() * 0.6));
+   pCol[i*3] = c.r; pCol[i*3+1] = c.g; pCol[i*3+2] = c.b;
+ }
+
+ const pGeo = new THREE.BufferGeometry();
+ pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+ pGeo.setAttribute('aCol', new THREE.BufferAttribute(pCol, 3));
+ pGeo.setAttribute('aSeed', new THREE.BufferAttribute(pSeed, 1));
+
+ const pPoints = new THREE.Points(pGeo, burstMat);
+ burstGroup.add(pPoints);
+
+ burstGroup.userData = { t0: performance.now(), dur: 1400, pPoints, pPos, pVel, pCount };
+ scene.add(burstGroup);
+
+ burstLight = new THREE.PointLight(0x6ff3ff, 2.2, 14);
+ burstLight.position.copy(pos);
+ scene.add(burstLight);
+
+ tu.uPulse.value = 1.4;
+}
+
+/* ---------- interaction ---------- */
+let drag=false,lx=0,ly=0,vy=0.08,zoom=0;
+canvas.addEventListener('pointerdown',e=>{drag=true;lx=e.clientX;ly=e.clientY;canvas.setPointerCapture(e.pointerId)});
+canvas.addEventListener('pointerup',()=>drag=false);
+canvas.addEventListener('pointermove',e=>{if(!drag)return;world.rotation.y+=(e.clientX-lx)*.006;world.rotation.x=clamp(world.rotation.x+(e.clientY-ly)*.004,-1.1,1.1);lx=e.clientX;ly=e.clientY});
+
+canvas.addEventListener('wheel',e=>{
+ const isAtHero = window.scrollY < window.innerHeight * 0.4;
+ if(isAtHero && !e.ctrlKey){
+   return;
+ }
+ if(phase==='results'||phase==='docked'||phase==='analysis'||e.ctrlKey){
+   e.preventDefault();
+   zoom=clamp(zoom+e.deltaY*.003,-1.5,2);
+ }
+},{passive:false});
+
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+addEventListener('resize',resize);resize();
+
+/* ---------- loop ---------- */
+let last=performance.now();
+function frame(now){
+ const dt=Math.min(.05,(now-last)/1000);last=now;
+ const wide=innerWidth>800;
+ 
+ // Parallax position based on scroll and phase
+ const scrollFrac=clamp(window.scrollY/window.innerHeight, 0, 1);
+ const pos=world.position;
+ 
+ let tx=0, ty=0;
+ if(wide){
+  if(phase==='analysis'){
+   tx=-1.35; ty=0.2;
+  }else if(phase==='docking'){
+   // Cinematic focus: Center protein in screen when docking animation runs
+   tx=0; ty=0;
+  }else if(phase==='results'||phase==='docked'){
+   // Center protein in the open gap between left hero (28vw) and right panel (76vw)
+   tx=0.55; ty=0.06;
+  }else{
+   tx=scrollFrac*1.95;
+   ty=scrollFrac*0.15;
+  }
+ }else{
+  if(scrollFrac<0.2){
+   tx=0; ty=0;
+  }else if(phase==='docking'){
+   tx=0; ty=0.3;
+  }else{
+   tx=0.45; ty=1.35;
+  }
+ }
+ pos.x+=(tx-pos.x)*Math.min(1,dt*3.5);
+ pos.y+=(ty-pos.y)*Math.min(1,dt*3.5);
+ 
+ const baseZ = wide ? (phase === 'docking' ? 5.0 : (phase === 'docked' || phase === 'results' ? 6.8 : 6.0)) : (phase === 'docking' ? 7.2 : 9.5);
+ camera.position.z+=((baseZ)+zoom-camera.position.z)*Math.min(1,dt*3.5);
+ if(!drag&&!reduce)world.rotation.y+=vy*dt*(dockA?.4:1);
+ pu.uTime.value=tu.uTime.value=now/1000;
+
+ morph+=(morphT-morph)*Math.min(1,dt*1.8);
+ if(Math.abs(morphT-morph)<.0004)morph=morphT;
+ if(morph!==lastMorph){
+  lastMorph=morph;
+  for(let i=0;i<N;i++){
+   const m=clamp(morph*1.5-seed[i]*.5,0,1),e=m*m*(3-2*m);
+   for(let k=0;k<3;k++)P[i*3+k]=A[i*3+k]+(B[i*3+k]-A[i*3+k])*e;
+  }
+  pg.attributes.position.needsUpdate=true;
+ }
+ 
+ tu.uOp.value=morphT?clamp(morph*1.6,0,1):0;
+ pv+=((phase==='results'||phase==='analysis'?0:1)-pv)*Math.min(1,dt*3);
+ pu.uVis.value=tu.uVis.value=pv;
+ pts.visible=tubes.visible=pv>.01;
+ tu.uPulse.value*=Math.pow(.25,dt);
+
+ if(lig){
+  if(dockA){
+   const u=clamp((now-dockA.t0)/dockA.dur,0,1),e=ease(u),a=dockA;
+   lig.position.set(0,0,0).addScaledVector(a.s,(1-e)*(1-e)).addScaledVector(a.m,2*e*(1-e)).addScaledVector(a.e,e*e);
+   lig.quaternion.slerpQuaternions(a.q0,a.q1,e);lig.scale.setScalar(a.sc0+(S*1.5-a.sc0)*e);
+   if(u>=1){dockA=null;burst();setPhase('docked');setText('Docked.',cands[sel].name+' sits in the pocket. Pick another to compare.')}
+  }
+  else if(phase==='docked'){lig.rotation.y+=dt*.4;lig.scale.setScalar(S*1.5*(1+.03*Math.sin(now/400)))}
+  else{lig.rotation.y+=dt*.5;lig.rotation.x+=dt*.15;lig.position.y=Math.sin(now/900)*.06;lig.scale.setScalar(S*3.2)}
+ }
+
+ if(burstGroup){
+  const bData = burstGroup.userData;
+  const t = (now - bData.t0) / bData.dur;
+  if(t >= 1){
+   scene.remove(burstGroup);
+   burstGroup.traverse(o => { if(o.geometry) o.geometry.dispose(); });
+   burstGroup = null;
+   if(burstLight){ scene.remove(burstLight); burstLight = null; }
+  } else {
+   const posAttr = bData.pPoints.geometry.attributes.position;
+   const pArr = posAttr.array;
+   const dragFactor = Math.pow(0.04, dt);
+   for(let k = 0; k < bData.pCount; k++){
+     bData.pVel[k*3] *= dragFactor;
+     bData.pVel[k*3+1] *= dragFactor;
+     bData.pVel[k*3+2] *= dragFactor;
+     pArr[k*3] += bData.pVel[k*3] * dt;
+     pArr[k*3+1] += bData.pVel[k*3+1] * dt;
+     pArr[k*3+2] += bData.pVel[k*3+2] * dt;
+   }
+   posAttr.needsUpdate = true;
+   burstMat.uniforms.uOp.value = Math.max(0, 1.0 - Math.pow(t, 1.6));
+   burstMat.uniforms.uSize.value = 3.2 * (1.0 - t * 0.35);
+
+   if(burstLight){
+     burstLight.intensity = 2.2 * Math.pow(1 - t, 2.0);
+   }
+  }
+ }
+
+ renderer.render(scene,camera);
+ requestAnimationFrame(frame);
+}
+
+setPhase('input');$('#tag').hidden=false;route();
+requestAnimationFrame(frame);
+
+/* ========================================================================== */
+/* SCOPED PDB STRUCTURE VIEWER LOGIC (Rule-Compliant Integration)              */
+/* ========================================================================== */
+let pdbViewer = null;
+let pdbCurrentModel = null;
+let pdbCurrentRep = 'cartoon';
+let pdbCurrentColor = 'ss';
+let pdbShowLigands = true;
+let pdbShowWaters = false;
+let pdbIsSpinning = false;
+let pdbEnsemble = null;
+
+const pdbRoot = $('#pdb-viewer-root');
+const pdbViewport = $('#pdb-viewport-container');
+const pdbToastEl = $('#pdb-toast');
+const pdbDropOverlay = $('#pdb-drop-overlay');
+const pdbIdInput = $('#pdb-id-input');
+const pdbBtnFetch = $('#pdb-btn-fetch');
+const pdbFileInput = $('#pdb-file-input');
+const pdbBtnClear = $('#pdb-btn-clear');
+const pdbBtnBack = $('#pdb-btn-back');
+const pdbSelectModel = $('#pdb-select-model');
+const pdbGroupModel = $('#pdb-group-model');
+const pdbSelectColor = $('#pdb-select-color');
+const pdbChkLigands = $('#pdb-chk-ligands');
+const pdbChkWaters = $('#pdb-chk-waters');
+const pdbChkSpin = $('#pdb-chk-spin');
+const pdbBtnRecenter = $('#pdb-btn-recenter');
+const pdbInfoHud = $('#pdb-info-hud');
+const pdbInfoTitle = $('#pdb-info-title');
+const pdbInfoClass = $('#pdb-info-classification');
+const pdbMetricAtoms = $('#pdb-metric-atoms');
+const pdbMetricResidues = $('#pdb-metric-residues');
+const pdbMetricChains = $('#pdb-metric-chains');
+const pdbCoordAuditLine = $('#pdb-coord-audit-line');
+
+// Rule 4: Create viewer only when PDB screen is first shown, then resize & zoomTo
+function ensurePdbViewer() {
+  if (!pdbViewer && typeof $3Dmol !== 'undefined') {
+    pdbViewer = $3Dmol.createViewer(pdbViewport, { backgroundColor: '#07090e' });
+  }
+  if (pdbViewer) {
+    pdbViewer.resize();
+    pdbViewer.zoomTo();
+    pdbViewer.render();
+  }
+}
+
+// Navigation entry points for the PDB viewer
+function openPdbViewer(textToLoad, nameToLoad) {
+  location.hash = 'pdb';
+  pdbRoot.hidden = false;
+  pdbRoot.scrollIntoView({ behavior: 'smooth' });
+  ensurePdbViewer();
+
+  if (textToLoad) {
+    loadPdbStructure(textToLoad, 'pdb', nameToLoad || 'Uploaded PDB');
+  } else if (!pdbCurrentModel && pdbText) {
+    // If the user already chose a protein on the lab page, view it!
+    loadPdbStructure(pdbText, 'pdb', fileName || 'Active Protein');
+  }
+}
+
+$('#btn-open-pdb').onclick = () => openPdbViewer();
+pdbBtnBack.onclick = () => {
+  location.hash = 'lab';
+  scrollToLab();
+};
+
+let pdbToastTimer = null;
+function showPdbToast(msg, type = 'info', duration = 3000) {
+  clearTimeout(pdbToastTimer);
+  pdbToastEl.textContent = msg;
+  pdbToastEl.className = 'pdb-toast ' + type;
+  pdbToastEl.hidden = false;
+  if (duration > 0) {
+    pdbToastTimer = setTimeout(() => { pdbToastEl.hidden = true; }, duration);
+  }
+}
+
+function parsePdbMeta(text) {
+  let title = '', classification = '';
+  const lines = text.split('\n');
+  for (let i = 0; i < Math.min(lines.length, 300); i++) {
+    const l = lines[i];
+    if (l.startsWith('HEADER')) classification = l.substring(10, 50).trim();
+    else if (l.startsWith('TITLE')) {
+      const part = l.substring(10, 80).trim();
+      title += (title ? ' ' : '') + part;
+    }
+  }
+  return { title: title || 'Protein Structure', classification: classification || 'X-RAY / CRYO-EM / NMR' };
+}
+
+function detectPdbModels(text) {
+  const lines = text.split('\n');
+  const headerLines = [];
+  const models = [];
+  let currentModelLines = [];
+  let inModel = false;
+  let currentModelIndex = 1;
+
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    if (!inModel && (l.startsWith('HEADER') || l.startsWith('TITLE') || l.startsWith('COMPND') || l.startsWith('HELIX') || l.startsWith('SHEET'))) {
+      headerLines.push(l);
+    }
+    if (l.startsWith('MODEL')) {
+      inModel = true;
+      const tokens = l.trim().split(/\s+/);
+      currentModelIndex = tokens[1] || (models.length + 1);
+      currentModelLines = [...headerLines, l];
+    } else if (l.startsWith('ENDMDL')) {
+      currentModelLines.push(l);
+      models.push({ id: currentModelIndex, text: currentModelLines.join('\n') });
+      currentModelLines = [];
+      inModel = false;
+    } else if (inModel) {
+      currentModelLines.push(l);
+    }
+  }
+  return models.length > 1 ? models : null;
+}
+
+function loadPdbStructure(text, format = 'pdb', sourceName = '') {
+  if (!text || !text.trim()) {
+    showPdbToast('Error: Empty or unreadable file.', 'error');
+    return;
+  }
+  ensurePdbViewer();
+
+  pdbEnsemble = detectPdbModels(text);
+  if (pdbEnsemble) {
+    pdbGroupModel.style.display = 'block';
+    pdbSelectModel.innerHTML = '';
+    pdbEnsemble.forEach((m, idx) => {
+      const opt = document.createElement('option');
+      opt.value = idx;
+      opt.textContent = `Model ${m.id} (${idx + 1} of ${pdbEnsemble.length})`;
+      pdbSelectModel.appendChild(opt);
+    });
+    renderPdbModel(pdbEnsemble[0].text, format, sourceName);
+  } else {
+    pdbGroupModel.style.display = 'none';
+    renderPdbModel(text, format, sourceName);
+  }
+}
+
+function renderPdbModel(textToRender, format, sourceName) {
+  if (!pdbViewer) ensurePdbViewer();
+  if (!pdbViewer) return;
+
+  pdbViewer.clear();
+  pdbViewer.removeAllSurfaces();
+
+  try {
+    pdbCurrentModel = pdbViewer.addModel(textToRender, format);
+  } catch (err) {
+    showPdbToast('Parsing failed: ' + err.message, 'error', 5000);
+    return;
+  }
+
+  const atoms = pdbCurrentModel.selectedAtoms({});
+  if (!atoms || atoms.length === 0) {
+    showPdbToast('No valid ATOM records found in this file.', 'error', 5000);
+    pdbCurrentModel = null;
+    pdbViewer.render();
+    pdbInfoHud.style.display = 'none';
+    return;
+  }
+
+  // Console Ground Truth Verification: Log the first 5 atoms
+  console.group(`%c=== PDB ATOMIC COORDINATES AUDIT: ${sourceName || 'PDB'} ===`, 'color:#6ff3ff; font-weight:bold;');
+  console.log(`Total Atoms Parsed: %c${atoms.length}`, 'color:#4ade80; font-weight:bold;');
+  atoms.slice(0, 5).forEach((a, idx) => {
+    console.log(
+      `%c[Atom ${idx + 1}]%c Name: %c${a.atom.padEnd(4)}%c | Residue: %c${a.resn} ${String(a.resi).padStart(4)}%c | Chain: %c${a.chain}%c | Coordinates: %c(x=${a.x.toFixed(3)}, y=${a.y.toFixed(3)}, z=${a.z.toFixed(3)})%c | B-Factor: ${a.b}`,
+      'color:#ffb04a; font-weight:bold;', 'color:inherit;',
+      'color:#6ff3ff; font-weight:bold;', 'color:inherit;',
+      'color:#b44cff; font-weight:bold;', 'color:inherit;',
+      'color:#4ade80; font-weight:bold;', 'color:inherit;',
+      'color:#ffffff; font-weight:bold;', 'color:inherit;'
+    );
+  });
+  console.groupEnd();
+
+  const meta = parsePdbMeta(textToRender);
+  pdbInfoTitle.textContent = meta.title;
+  // Rule 8 Fix: Use literal bullet ' • ' instead of '&bull;'
+  pdbInfoClass.textContent = (sourceName ? sourceName + ' • ' : '') + meta.classification;
+
+  pdbMetricAtoms.textContent = atoms.length.toLocaleString();
+  const chainsSet = new Set(atoms.map(a => a.chain));
+  const residuesSet = new Set(atoms.map(a => `${a.chain}_${a.resi}_${a.resn}`));
+  pdbMetricChains.textContent = chainsSet.size;
+  pdbMetricResidues.textContent = residuesSet.size.toLocaleString();
+
+  const firstAtom = atoms[0];
+  pdbCoordAuditLine.innerHTML = `Atom 1 [${firstAtom.atom}] ${firstAtom.resn}${firstAtom.resi} (Chain ${firstAtom.chain})<br>x=<b>${firstAtom.x.toFixed(3)}</b>, y=<b>${firstAtom.y.toFixed(3)}</b>, z=<b>${firstAtom.z.toFixed(3)}</b>`;
+  pdbInfoHud.style.display = 'block';
+
+  applyPdbStyles();
+  pdbViewer.zoomTo();
+  pdbViewer.render();
+  showPdbToast(`Loaded ${sourceName || 'structure'} (${atoms.length.toLocaleString()} atoms)`, 'success', 2500);
+}
+
+function applyPdbStyles() {
+  if (!pdbCurrentModel || !pdbViewer) return;
+
+  pdbViewer.removeAllSurfaces();
+
+  let colorConfig = {};
+  if (pdbCurrentColor === 'ss') {
+    colorConfig = { colorscheme: 'ssPyMOL' };
+  } else if (pdbCurrentColor === 'chain') {
+    colorConfig = { colorscheme: 'chainHetatm' };
+  } else if (pdbCurrentColor === 'amino') {
+    colorConfig = { colorscheme: 'amino' };
+  } else if (pdbCurrentColor === 'spectrum') {
+    colorConfig = { colorscheme: 'spectrum' };
+  } else if (pdbCurrentColor === 'bfactor') {
+    colorConfig = { colorscheme: { prop: 'b', gradient: 'rwb', min: 0, max: 80 } };
+  }
+
+  if (pdbCurrentRep === 'cartoon') {
+    pdbViewer.setStyle({ hetflag: false }, { cartoon: { ...colorConfig, style: 'oval' } });
+  } else if (pdbCurrentRep === 'stick') {
+    pdbViewer.setStyle({ hetflag: false }, { stick: { ...colorConfig, radius: 0.22 } });
+  } else if (pdbCurrentRep === 'sphere') {
+    pdbViewer.setStyle({ hetflag: false }, { sphere: { ...colorConfig, scale: 0.82 } });
+  } else if (pdbCurrentRep === 'line') {
+    pdbViewer.setStyle({ hetflag: false }, { line: { ...colorConfig, linewidth: 2 } });
+  } else if (pdbCurrentRep === 'surface') {
+    pdbViewer.setStyle({ hetflag: false }, { cartoon: { ...colorConfig, opacity: 0.45 } });
+    try {
+      pdbViewer.addSurface($3Dmol.SurfaceType.VDW, { opacity: 0.82, ...colorConfig }, { hetflag: false });
+    } catch (e) {
+      console.warn('Surface notice:', e);
+    }
+  }
+
+  if (pdbShowLigands) {
+    pdbViewer.addStyle(
+      { hetflag: true, not: { resn: ['HOH', 'WAT', 'DOD'] } },
+      { stick: { radius: 0.28, colorscheme: 'default' } }
+    );
+    pdbViewer.addStyle(
+      { hetflag: true, not: { resn: ['HOH', 'WAT', 'DOD'] }, atom: ['FE', 'ZN', 'MG', 'CA', 'NA', 'CL', 'MN', 'CU'] },
+      { sphere: { radius: 0.75, colorscheme: 'default' } }
+    );
+  } else {
+    pdbViewer.setStyle({ hetflag: true, not: { resn: ['HOH', 'WAT', 'DOD'] } }, {});
+  }
+
+  if (pdbShowWaters) {
+    pdbViewer.addStyle({ resn: ['HOH', 'WAT', 'DOD'] }, { sphere: { radius: 0.35, color: '#ff4d4d' } });
+  } else {
+    pdbViewer.setStyle({ resn: ['HOH', 'WAT', 'DOD'] }, {});
+  }
+
+  pdbViewer.render();
+}
+
+async function fetchRcsbPdb(id) {
+  const cleanId = (id || '').trim().toUpperCase();
+  if (!/^[0-9][A-Z0-9]{3}$/.test(cleanId)) {
+    showPdbToast('Enter a valid 4-character PDB code (e.g. 1CRN, 4HHB)', 'error');
+    return;
+  }
+
+  showPdbToast(`Downloading ${cleanId} from RCSB...`, 'info', 0);
+  pdbBtnFetch.disabled = true;
+
+  try {
+    const url = `https://files.rcsb.org/download/${cleanId}.pdb`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status} - ID not found on RCSB`);
+    const text = await response.text();
+    loadPdbStructure(text, 'pdb', `${cleanId}.pdb`);
+    pdbIdInput.value = '';
+  } catch (err) {
+    showPdbToast(`Fetch failed: ${err.message}`, 'error', 4500);
+  } finally {
+    pdbBtnFetch.disabled = false;
+  }
+}
+
+function handlePdbUploadedFile(file) {
+  if (!file) return;
+  const name = file.name;
+  const ext = name.split('.').pop().toLowerCase();
+  const format = (ext === 'cif' || ext === 'mmcif') ? 'cif' : 'pdb';
+
+  showPdbToast(`Reading ${name}...`, 'info', 1500);
+  const reader = new FileReader();
+  reader.onload = e => { loadPdbStructure(e.target.result, format, name); };
+  reader.onerror = () => { showPdbToast('Failed to read file from disk.', 'error'); };
+  reader.readAsText(file);
+}
+
+// User-driven events (Rule 5: No automatic fetch on load)
+pdbBtnFetch.addEventListener('click', () => fetchRcsbPdb(pdbIdInput.value));
+pdbIdInput.addEventListener('keydown', e => { if (e.key === 'Enter') fetchRcsbPdb(pdbIdInput.value); });
+
+document.querySelectorAll('[data-pdb]').forEach(btn => {
+  btn.addEventListener('click', () => fetchRcsbPdb(btn.dataset.pdb));
+});
+
+pdbFileInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) handlePdbUploadedFile(file);
+  e.target.value = '';
+});
+
+// Rule 6: Attach drag-and-drop strictly to pdbRoot only, not window
+pdbRoot.addEventListener('dragover', e => {
+  e.preventDefault();
+  e.stopPropagation();
+  pdbDropOverlay.classList.add('active');
+});
+pdbRoot.addEventListener('dragleave', e => {
+  e.preventDefault();
+  e.stopPropagation();
+  if (!e.relatedTarget || !pdbRoot.contains(e.relatedTarget)) {
+    pdbDropOverlay.classList.remove('active');
+  }
+});
+pdbRoot.addEventListener('drop', e => {
+  e.preventDefault();
+  e.stopPropagation();
+  pdbDropOverlay.classList.remove('active');
+  const file = e.dataTransfer.files[0];
+  if (file) handlePdbUploadedFile(file);
+});
+
+pdbSelectModel.addEventListener('change', () => {
+  if (!pdbEnsemble) return;
+  const idx = parseInt(pdbSelectModel.value, 10);
+  const selected = pdbEnsemble[idx];
+  if (selected) {
+    renderPdbModel(selected.text, 'pdb', `Model ${selected.id}`);
+  }
+});
+
+const pdbRepButtons = document.querySelectorAll('#pdb-rep-switcher .pdb-seg-btn');
+pdbRepButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    pdbRepButtons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    pdbCurrentRep = btn.dataset.rep;
+    applyPdbStyles();
+  });
+});
+
+pdbSelectColor.addEventListener('change', () => {
+  pdbCurrentColor = pdbSelectColor.value;
+  applyPdbStyles();
+});
+
+pdbChkLigands.addEventListener('change', () => {
+  pdbShowLigands = pdbChkLigands.checked;
+  applyPdbStyles();
+});
+pdbChkWaters.addEventListener('change', () => {
+  pdbShowWaters = pdbChkWaters.checked;
+  applyPdbStyles();
+});
+
+pdbBtnRecenter.addEventListener('click', () => {
+  if (pdbViewer) {
+    pdbViewer.zoomTo();
+    pdbViewer.render();
+  }
+});
+
+pdbChkSpin.addEventListener('change', () => {
+  pdbIsSpinning = pdbChkSpin.checked;
+  if (pdbViewer) {
+    if (pdbIsSpinning) pdbViewer.spin('y', 0.8);
+    else pdbViewer.spin(false);
+  }
+});
+
+pdbBtnClear.addEventListener('click', () => {
+  if (pdbViewer) {
+    pdbViewer.clear();
+    pdbViewer.removeAllSurfaces();
+    pdbViewer.spin(false);
+    pdbViewer.render();
+  }
+  pdbCurrentModel = null;
+  pdbEnsemble = null;
+  pdbGroupModel.style.display = 'none';
+  pdbInfoHud.style.display = 'none';
+  pdbChkSpin.checked = false;
+  showPdbToast('Viewer cleared.', 'info', 1800);
+});
+
+window.addEventListener('resize', () => {
+  if (pdbViewer && !pdbRoot.hidden) pdbViewer.resize();
+});
+})();
+</script>
+</body>
+</html>

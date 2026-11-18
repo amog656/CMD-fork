@@ -1,0 +1,18 @@
+# Checkpoints larger than 100MB (GitHub 100MB limit)
+*.pth
+*.pt
+cmdgen_repo/GCPG/checkpoints/model_checkpoints/checkpoints/final_model.pth
+cmdgen_repo/GCPG/checkpoints/model_checkpoints/docking_checkpoints/
+
+# Temporary & Cache
+__pycache__/
+*.pyc
+.pytest_cache/
+.dgl/
+test_runs/
+*.log
+.git_nested/
+
+# OS files
+Thumbs.db
+.DS_Store
