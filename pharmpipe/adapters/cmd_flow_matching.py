@@ -7,7 +7,7 @@ import subprocess
 import sys
 import tempfile
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
@@ -91,6 +91,25 @@ def _cluster_samples(state_id: str, samples: dict, seed: int) -> PharmModel:
     return PharmModel(f"pharmflow_{state_id}", points, "per-state", [state_id])
 
 
+def _default_flow_matching_python() -> str:
+    try:
+        import torch  # noqa: F401
+        return sys.executable
+    except ImportError:
+        pass
+
+    user_home = Path.home()
+    candidates = [
+        user_home / "miniconda3" / "envs" / "diffphar-fm" / ("python.exe" if sys.platform == "win32" else "bin/python"),
+        user_home / "anaconda3" / "envs" / "diffphar-fm" / ("python.exe" if sys.platform == "win32" else "bin/python"),
+        Path(r"C:\Users\hanut sai\miniconda3\envs\diffphar-fm\python.exe"),
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return str(candidate)
+    return sys.executable
+
+
 @dataclass
 class CMDFlowMatchingAdapter:
     """Run the real checkpoint in its repository environment and pool its samples."""
@@ -99,12 +118,17 @@ class CMDFlowMatchingAdapter:
     checkpoint_path: str | Path
     samples_per_state: int
     timesteps: int
-    python_executable: str = sys.executable
+    python_executable: str = field(default_factory=_default_flow_matching_python)
     version: str = "cmd-fork-diffphar-dev-flow-matching"
 
     def __post_init__(self) -> None:
         self.repository_dir = Path(self.repository_dir).resolve()
         self.checkpoint_path = Path(self.checkpoint_path).resolve()
+        if not self.checkpoint_path.is_file():
+            # Fallback to epoch 12 or latest checkpoint in repo if specified doesn't exist
+            epoch12 = self.repository_dir / "best-model-epoch=epoch=12.ckpt"
+            if epoch12.is_file():
+                self.checkpoint_path = epoch12
         if self.samples_per_state <= 0:
             raise ValueError("pharmflow_samples_per_state must be positive")
         if not 10 <= self.timesteps <= 20:

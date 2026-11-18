@@ -34,7 +34,7 @@ n_minima:
 merge: {vote_fraction: 0.5, group_distance_A: 1.5}
 thresholds:
   pharmflow_repository_dir: ../../pharmflow_repo
-  pharmflow_checkpoint_path: ../../pharmflow_repo/best-model-epoch=epoch=01.ckpt
+  pharmflow_checkpoint_path: ../../pharmflow_repo/best-model-epoch=epoch=12.ckpt
   pharmflow_samples_per_state: 1
   pharmflow_timesteps: 10
   gcpg_repository_dir: ../../cmdgen_repo

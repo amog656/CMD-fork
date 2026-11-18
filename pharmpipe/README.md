@@ -86,7 +86,7 @@ that checkout's dependencies are installed:
 ```yaml
 thresholds:
   pharmflow_repository_dir: /absolute/path/to/CMD-fork
-  pharmflow_checkpoint_path: /absolute/path/to/best-model-epoch=epoch=01.ckpt
+  pharmflow_checkpoint_path: /absolute/path/to/best-model-epoch=epoch=12.ckpt
   pharmflow_python_executable: python
   pharmflow_samples_per_state: 5
   pharmflow_timesteps: 15

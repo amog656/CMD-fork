@@ -97,64 +97,68 @@ def generate_molecules_sdf(
             in_domain=True,
         )
 
-        # Check for co-crystallized ligand in pocket
-        het_lines = []
-        with open(pdb_path, "r", encoding="utf-8", errors="ignore") as handle:
-            for line in handle:
-                if line.startswith("HETATM") and "HOH" not in line and "MSE" not in line:
-                    het_lines.append(line)
-
+        # 1. Flow-Matching AI Pharmacophore Generation (using newly trained Epoch 12 model)
         model = None
-        if het_lines:
-            try:
-                from rdkit import RDConfig
-                from rdkit.Chem import ChemicalFeatures
-                import numpy as np
-
-                lig_mol = Chem.MolFromPDBBlock("".join(het_lines))
-                if lig_mol and lig_mol.GetNumAtoms() > 3:
-                    fdef = str(Path(RDConfig.RDDataDir) / "BaseFeatures.fdef")
-                    feat_factory = ChemicalFeatures.BuildFeatureFactory(fdef)
-                    feats = feat_factory.GetFeaturesForMol(lig_mol)
-                    conf = lig_mol.GetConformer()
-
-                    mapping = {
-                        "Donor": "HDON",
-                        "Acceptor": "HACC",
-                        "Hydrophobe": "HYBL",
-                        "Aromatic": "AROM",
-                        "PosIonizable": "POSC",
-                        "NegIonizable": "NEGI",
-                    }
-                    extracted_points = []
-                    for feat in feats:
-                        fam = feat.GetFamily()
-                        ft = mapping.get(fam)
-                        if ft:
-                            pos = np.mean([list(conf.GetAtomPosition(a)) for a in feat.GetAtomIds()], axis=0)
-                            extracted_points.append(PharmPoint(tuple(np.round(pos, 3)), ft))
-
-                    if extracted_points:
-                        sel_points = extracted_points[:8]
-                        model = PharmModel(
-                            model_id=f"crystal_{pdb_path.stem}",
-                            points=sel_points,
-                            origin="per-state",
-                        )
-                        print(f"[GANDIVA] Extracted {len(sel_points)} ground-truth crystal pharmacophore points from pocket ligand.")
-            except Exception as e:
-                print(f"[GANDIVA] Crystal pharmacophore extraction skipped: {e}")
-
-        # Fallback to PharmFlow if no ligand or extraction failed
-        if model is None:
-            print("[GANDIVA] Running PharmFlow Flow-Matching AI pharmacophore prediction...")
+        try:
+            print("[GANDIVA] Running PharmFlow Flow-Matching AI pharmacophore prediction (Epoch 12 checkpoint)...")
             flow_adapter = CMDFlowMatchingAdapter(
                 repository_dir="pharmflow_repo",
-                checkpoint_path="pharmflow_repo/best-model-epoch=epoch=01.ckpt",
+                checkpoint_path="pharmflow_repo/best-model-epoch=epoch=12.ckpt",
                 samples_per_state=1,
                 timesteps=10,
             )
             model = flow_adapter.predict(state, seed=42)
+            print(f"[GANDIVA] PharmFlow successfully predicted {len(model.points)} pharmacophore points from Epoch 12 model.")
+        except Exception as e:
+            print(f"[GANDIVA] PharmFlow prediction error: {e}. Falling back to pocket ligand extraction...")
+
+        # Fallback to crystal ligand extraction if PharmFlow was unavailable
+        if model is None:
+            het_lines = []
+            with open(pdb_path, "r", encoding="utf-8", errors="ignore") as handle:
+                for line in handle:
+                    if line.startswith("HETATM") and "HOH" not in line and "MSE" not in line:
+                        het_lines.append(line)
+
+            if het_lines:
+                try:
+                    from rdkit import RDConfig
+                    from rdkit.Chem import ChemicalFeatures
+                    import numpy as np
+
+                    lig_mol = Chem.MolFromPDBBlock("".join(het_lines))
+                    if lig_mol and lig_mol.GetNumAtoms() > 3:
+                        fdef = str(Path(RDConfig.RDDataDir) / "BaseFeatures.fdef")
+                        feat_factory = ChemicalFeatures.BuildFeatureFactory(fdef)
+                        feats = feat_factory.GetFeaturesForMol(lig_mol)
+                        conf = lig_mol.GetConformer()
+
+                        mapping = {
+                            "Donor": "HDON",
+                            "Acceptor": "HACC",
+                            "Hydrophobe": "HYBL",
+                            "Aromatic": "AROM",
+                            "PosIonizable": "POSC",
+                            "NegIonizable": "NEGI",
+                        }
+                        extracted_points = []
+                        for feat in feats:
+                            fam = feat.GetFamily()
+                            ft = mapping.get(fam)
+                            if ft:
+                                pos = np.mean([list(conf.GetAtomPosition(a)) for a in feat.GetAtomIds()], axis=0)
+                                extracted_points.append(PharmPoint(tuple(np.round(pos, 3)), ft))
+
+                        if extracted_points:
+                            sel_points = extracted_points[:8]
+                            model = PharmModel(
+                                model_id=f"crystal_{pdb_path.stem}",
+                                points=sel_points,
+                                origin="per-state",
+                            )
+                            print(f"[GANDIVA] Extracted {len(sel_points)} ground-truth crystal pharmacophore points from pocket ligand.")
+                except Exception as e:
+                    print(f"[GANDIVA] Crystal pharmacophore extraction skipped: {e}")
 
         # 2. GCPG Molecule generation
         gcpg_adapter = CMDGCPGAdapter(

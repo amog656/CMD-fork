@@ -8,6 +8,7 @@ split_by_name.pt
 checkpoints/
 results/
 *.ckpt
+!best-model-epoch=epoch=12.ckpt
 *.json
 fm_generation_test/
 
