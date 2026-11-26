@@ -1,0 +1,2 @@
+CCOC(=O)c1c2c(nn1-c1cc(C)n[nH]1)-c1ccccc1OC2(C)COC1CCCCC1
+O=C(c1c(C2CCCCC2)n(-c2ccccc2OC(F)F)[nH]c(=O)c1=O)N1CCCCC1

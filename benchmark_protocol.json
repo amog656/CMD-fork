@@ -1,0 +1,118 @@
+{
+  "title": "CMD-GEN versus PharmFlow project benchmark",
+  "status": "exploratory matched sampler and common-downstream pilot complete; one of five extracted held-out cases benchmarked; not a held-out statistical benchmark",
+  "comparison_question": "Does replacing CMD-GEN DiffPhar with the current PharmFlow sampler improve pharmacophore sampling or end-to-end molecule generation under matched targets and evaluation settings?",
+  "primary_comparison": {
+    "arms": [
+      "official CMD-GEN DiffPhar",
+      "current PharmFlow"
+    ],
+    "sampler_only_controls": [
+      "same receptor coordinates and pocket definition",
+      "same number of pharmacophore points",
+      "same receptor conformations (preferably fixed static structure for sampler attribution)",
+      "same consensus/GMM implementation and clustering settings",
+      "same downstream GCPG checkpoint, molecule conditions, and candidate count",
+      "same conformer generation, preparation, Vina version/settings, and random seeds"
+    ],
+    "end_to_end_comparison": "Report separately using each method's native downstream steps, with shared receptor preparation, target set, candidate count, and scoring protocol. Do not attribute an end-to-end difference to the sampler alone."
+  },
+  "evaluation_set": {
+    "preferred": "Recover the sequence-identity-controlled CrossDocked held-out split used by CMD-GEN and verify it does not overlap the PharmFlow training split.",
+    "target_count": 100,
+    "split_manifest": "baseline_assets/extracted/CMD-GEN/dataset/source_data/diffphar/split_by_name.pt",
+    "split_manifest_sha256": "",
+    "status": "Official release test manifest recovered (100 names); five matching receptor-ligand examples extracted; AROE_THET8 held-out case benchmarked (10 samples per sampler, 20 molecules per arm); four remain.",
+    "note": "PharmFlow training-set overlap cannot be ruled out because its original split manifest is unavailable. The current performance pilot covers the three published case-study structures plus one extracted held-out case (AROE_THET8)."
+  },
+  "sampling": {
+    "minimum_candidates_per_target_per_seed": 100,
+    "seeds": [
+      11,
+      22,
+      33,
+      44,
+      55
+    ],
+    "matched_seed_schedule": true,
+    "record_failures_and_invalid_outputs": true
+  },
+  "metrics": [
+    "pharmacophore feature/type and coordinate agreement to reference",
+    "validity",
+    "uniqueness",
+    "novelty against a documented common training set",
+    "available-molecule ratio",
+    "MW, QED, logP, SAS, rotatable bonds",
+    "pharmacophore match rate",
+    "Vina score distribution and ligand efficiency",
+    "symmetry-corrected pose RMSD against crystal ligand",
+    "runtime and peak memory"
+  ],
+  "statistics": {
+    "unit_of_analysis": "target, with candidate and seed nested within target",
+    "report": "paired per-target differences, aggregate mean/median, 95% confidence intervals, and target-level results",
+    "avoid": [
+      "best-molecule-only comparisons",
+      "comparing local pilot scores with published scores from different targets/settings"
+    ]
+  },
+  "frozen_local_checkpoints": {
+    "pharmflow": {
+      "path": "checkpoints_pharmflow/best_model_epoch_46.ckpt",
+      "sha256": "DBF364717F79A8E4D002A57BFAE5A1F0E0436315F0CCAE88B0CDAFD249475C0D"
+    },
+    "gcpg": {
+      "path": "checkpoints_gcpg/model_checkpoints/checkpoints/final_model.pth",
+      "sha256": "59071A44B37E346149757CFB747D40986EEC4A8E294903D7E9AD6F47617EDA95",
+      "identity_with_official_cmdgen_checkpoint": "not yet verified"
+    }
+  },
+  "baseline_asset": {
+    "record": "https://zenodo.org/records/13841142",
+    "archive": "CMD-GEN.zip",
+    "published_size_bytes": 5766908935,
+    "published_md5": "77a8959db7944bc8a68fb865d34a8b5e",
+    "local_path": "baseline_assets/CMD-GEN.zip",
+    "download_status": "complete; testzip passed; published MD5 verified",
+    "verified_md5": "77A8959DB7944BC8A68FB865D34A8B5E",
+    "extracted_diffphar_checkpoint": "baseline_assets/extracted/CMD-GEN/code/CMD-GEN/DiffPhar/checkpoints/full_atom/best-model-epoch=epoch=281.ckpt",
+    "checkpoint_sha256": "4AC63D9F60FC86779DFE4572A77D87F500EB0E7AFFE9AEACB5AEF0CA80407755"
+  },
+  "pilot_run": {
+    "targets": [
+      "7NI4 (ATM)",
+      "7ONS (PARP1)",
+      "8A9K (USP1)"
+    ],
+    "samples_per_sampler_per_target": 50,
+    "seed": 11,
+    "pharmacophore_points_per_sample": 8,
+    "shared_pocket": "same ligand-centered 10 A pocket, capped at 400 heavy atoms",
+    "diffphar_steps": 500,
+    "pharmflow_steps": 50,
+    "common_downstream": "same local GMM, same local GCPG checkpoint/tokenizer and property conditions, same RDKit/UFF conformers, same receptor preparation, Vina v1.2.7 exhaustiveness 1 and fixed 22 A box",
+    "sampler_metrics": "one-to-one pharmacophore-family feature precision/recall/F1 within 2 A of bound-ligand RDKit features",
+    "end_to_end_molecules_requested_per_arm_target": 20,
+    "output_directory": "results/cmdgen_sampler_pilot, results/cmdgen_end_to_end_pilot, and results/heldout_comparison",
+    "limitations": [
+      "one random seed; three selected target case studies plus one held-out case; no confidence interval or significance test",
+      "official 100-case test manifest recovered; one of five extracted held-out cases (AROE_THET8) benchmarked and four remain; PharmFlow training overlap is unknown",
+      "common-downstream comparison uses the current project's GCPG and RDKit/UFF/Vina path, not CMD-GEN's native GCPG checkpoint and PharAlign stage",
+      "Vina is a docking score, not experimental binding affinity or efficacy"
+    ]
+  },
+  "heldout_check": {
+    "target": "AROE_THET8",
+    "source": "baseline_assets/heldout_test_subset/AROE_THET8_1_263_0",
+    "samples_per_sampler": 10,
+    "seed": 11,
+    "pharmacophore_points_per_sample": 8,
+    "diffphar_steps": 500,
+    "pharmflow_steps": 50,
+    "end_to_end_molecules_requested_per_arm": 20,
+    "output_directory": "results/heldout_comparison",
+    "pharmflow_checkpoint_provenance": "Run metadata recorded C:/Users/hanut sai/Downloads/best_model_epoch_46.ckpt; SHA-256 DBF364717F79A8E4D002A57BFAE5A1F0E0436315F0CCAE88B0CDAFD249475C0D matches the project checkpoint.",
+    "status": "one of five extracted held-out cases benchmarked; four remain"
+  }
+}

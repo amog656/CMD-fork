@@ -1,0 +1,92 @@
+{
+  "n_features": 7,
+  "features": [
+    {
+      "center": [
+        21.52408790588379,
+        0.3049105107784271,
+        53.61204528808594
+      ],
+      "type": "HDON",
+      "raw_type": "Donor",
+      "state_coverage": 1.0,
+      "dispersion": 1.320055603981018,
+      "point_count": 8
+    },
+    {
+      "center": [
+        21.906909942626953,
+        -0.9616285562515259,
+        53.771400451660156
+      ],
+      "type": "HACC",
+      "raw_type": "Acceptor",
+      "state_coverage": 1.0,
+      "dispersion": 1.2129266262054443,
+      "point_count": 6
+    },
+    {
+      "center": [
+        22.252159118652344,
+        0.7036821842193604,
+        54.15721893310547
+      ],
+      "type": "HDON",
+      "raw_type": "Donor",
+      "state_coverage": 1.0,
+      "dispersion": 0.419488787651062,
+      "point_count": 3
+    },
+    {
+      "center": [
+        20.099048614501953,
+        0.570079505443573,
+        53.69061279296875
+      ],
+      "type": "HACC",
+      "raw_type": "Acceptor",
+      "state_coverage": 1.0,
+      "dispersion": 0.18816553056240082,
+      "point_count": 3
+    },
+    {
+      "center": [
+        23.43509864807129,
+        1.527796745300293,
+        56.29310607910156
+      ],
+      "type": "HDON",
+      "raw_type": "Donor",
+      "state_coverage": 1.0,
+      "dispersion": 0.10934923589229584,
+      "point_count": 2
+    },
+    {
+      "center": [
+        24.798154830932617,
+        -1.3066697120666504,
+        52.10666275024414
+      ],
+      "type": "HACC",
+      "raw_type": "Acceptor",
+      "state_coverage": 1.0,
+      "dispersion": 3.004546215379378e-06,
+      "point_count": 1
+    },
+    {
+      "center": [
+        24.060691833496094,
+        0.2297651171684265,
+        50.94703674316406
+      ],
+      "type": "HACC",
+      "raw_type": "Acceptor",
+      "state_coverage": 1.0,
+      "dispersion": 3.0045439416426234e-06,
+      "point_count": 1
+    }
+  ],
+  "source_states": [
+    "1M17_receptor_state_1"
+  ]
+}

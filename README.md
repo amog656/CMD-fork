@@ -31,7 +31,56 @@ DiffPhar/
 └── get_phar/                   # Pharmacophore extraction utilities
 ```
 
+## Live run (ready to run)
+
+Launch the front end from the project root with the `diffphar-fm` environment:
+
+```powershell
+& "C:\Users\hanut sai\miniconda3\envs\diffphar-fm\python.exe" -m streamlit run app.py
+```
+
+In the app, select **FKBP12 · rapamycin (1FKB)**, keep the live-run defaults (2 protein states, 6 molecules, Vina exhaustiveness 1), and click **Generate and dock molecules**. The real five-stage pipeline runs on the spot:
+
+1. aSAM generates the conformational ensemble.
+2. PharmFlow samples 3D pharmacophores.
+3. Consensus GMM merges the states.
+4. GCPG generates and embeds molecules.
+5. AutoDock Vina docks every molecule across every state.
+
+A verified live run with these defaults completed in about 110-130 seconds, produced 6/6 valid GCPG molecules, and passed Gates G0 and Q; the top candidate scored -8.72 kcal/mol mean. The app streams the full pipeline log while it runs. aSAM and PharmFlow use the GPU when available; aSAM falls back to CPU if CUDA fails. GCPG and Vina are CPU-only. For a larger run, use 2 states, 10 molecules, and exhaustiveness 2; a verified run of that size produced 10/10 valid GCPG molecules and passed G0/Q, with docking dominating the runtime. All other gates remain **NOT EVALUATED** because no independent benchmark or experimental data are included.
+
+### Environments used
+
+- `diffphar-fm` (`C:\Users\hanut sai\miniconda3\envs\diffphar-fm\python.exe`): app, aSAM (CUDA when available, CPU fallback), PharmFlow (CUDA), pipeline orchestration.
+- `gcpg` (`C:\Users\hanut sai\miniconda3\envs\gcpg\python.exe`): GCPG generation (DGL, CPU-only environment).
+- `diff_phar` (`C:\Users\hanut sai\miniconda3\envs\diff_phar\python.exe`): Meeko 0.8 with RDKit 2026.03.6. Do not use the `diffphar-fm` environment for Meeko; its RDKit 2022.09.5 is incompatible with Meeko 0.8.
+- `vina.exe` in the project root: AutoDock Vina 1.2.7 (CPU-only).
+- GPU: 4 GB VRAM is sufficient; aSAM uses about 1.2 GB and PharmFlow under 1 GB.
+- PharmFlow checkpoint: `checkpoints_pharmflow/best_model_epoch_46.ckpt`.
+- GCPG weights and tokenizer: `checkpoints_gcpg/model_checkpoints/checkpoints/`.
+
+The CLI resolves the project checkpoint, GCPG Python, Meeko Python, and Vina automatically:
+
+```powershell
+& "C:\Users\hanut sai\miniconda3\envs\diffphar-fm\python.exe" run_full_pipeline.py `
+  --pdb sample_examples\receptors\1FKB_receptor.pdb `
+  --pocket_center 3.109 12.167 13.353 --pocket_radius 10 `
+  --k_states 2 --n_mol 6 --exhaustiveness 1 `
+  --out_dir pipeline_run_output --device cuda --allow_bad_receptor_residues
+```
+
+### Known limitations
+
+- The 1M17 example can fail Gate Q in multi-state mode because the sampled states differ by more than the 2 Å C-alpha RMSD threshold. The pipeline now resamples and falls back to 1 state automatically if needed; use 1FKB for a true multi-state run.
+- Vina scores are docking rankings, not free energies or potency measurements. The FEP and G7-8 gates are intentionally not evaluated.
+- `train.py` needs the preprocessed dataset (`data_raw/processed_crossdock_noH_ca_only_temp/`), which is not included in this checkout. Training is not part of the app run.
+- `test.py` needs a labeled test directory; it is not needed for the app run.
+
 ## Quick Start (Local)
+
+### Try the front end with sample protein pockets
+
+Install the front-end dependency (`pip install streamlit`) and launch `streamlit run app.py`. In **Choose a structure**, select one of the built-in FKBP12–rapamycin or EGFR–erlotinib examples. The app fills in the prepared receptor and ligand-derived pocket center. See [sample_examples/README.md](sample_examples/README.md) for structure sources, files, and centers. The five pipeline stages still require the model checkpoints and executables configured in the app.
 
 ```bash
 # Install dependencies
@@ -44,10 +93,10 @@ python process_crossdock.py data_raw/ --ca_only --dist_cutoff 8.0
 # Train
 python train.py --config configs/crossdocked_ca_cond.yml
 
-# Generate pharmacophores
-python generate_phars.py checkpoints/epoch=XX.ckpt \
-  --pdbfile data_raw/processed_crossdock_noH_ca_only_temp/test/1phk-A-rec-1phk-atp-lig-tt-min-0-pocket10.pdb \
-  --resi_list A:24 A:25 A:26 A:27 A:28 \
+# Generate pharmacophores with the bundled full-atom checkpoint
+python generate_phars.py checkpoints_pharmflow/best_model_epoch_46.ckpt \
+  --pdbfile sample_examples/receptors/1FKB_receptor.pdb \
+  --resi_list A:54 A:55 A:56 A:48 A:53 A:46 A:47 A:87 A:59 A:49 A:82 A:81 A:57 A:52 A:37 \
   --n_samples 20 --num_nodes_phar 10
 ```
 
@@ -147,6 +196,36 @@ python test.py CHECKPOINT.ckpt \
   --test_dir data_raw/processed_crossdock_noH_ca_only_temp/test/ \
   --sanitize
 ```
+
+## Integrated pipeline
+
+`run_full_pipeline.py` is the inference orchestrator. It requires a matching PharmFlow checkpoint (`--ckpt`), the GCPG checkpoint and tokenizer under `checkpoints_gcpg/model_checkpoints/checkpoints/`, an input PDB accepted by aSAM, and locally installed aSAM weights. The bundled aSAM inference implementation is Linux-oriented; install it and its dependencies separately with `pip install -e asam_engine` on a supported Linux environment. The integrated runner uses the bundled Atlas aSAM model on CPU and will stop if its weights are unavailable; it does not synthesize coordinate perturbations as a substitute.
+
+The Python environment running the orchestrator needs the packages in `requirements.txt` and aSAM's dependencies. GCPG uses its compatible PyTorch/DGL/fairseq environment. Meeko and a compatible RDKit must be installed together in the environment selected by `--meeko_python` (defaults to `--gcpg_python`); its `mk_prepare_ligand` and `mk_prepare_receptor` commands prepare docking inputs. Example:
+
+```bash
+python run_full_pipeline.py \
+  --pdb asam_engine/examples/input/6h49_A.pdb \
+  --pocket_center X Y Z \
+  --ckpt /path/to/pharmflow.ckpt \
+  --gcpg_python /path/to/python-with-gcpg-dependencies \
+  --meeko_python /path/to/python-with-meeko-and-rdkit \
+  --n_mol 15 --device cpu
+```
+
+Replace `X Y Z` with the binding-site center measured in the receptor PDB coordinate frame. This input is required because the example receptor contains no bound ligand from which to infer the pocket. PharmFlow selects nearby atoms/residues within `--pocket_radius` (default 10 Å).
+
+The generated report separates checks that ran from gates marked `NOT EVALUATED`. Comparative performance gates require independent benchmark datasets; selectivity requires an off-target calculation; potency requires measured dose-response data. Vina docking scores are computational ranking signals and do not establish binding affinity, IC50, safety, or efficacy. No retrospective or experimental claims should be inferred from a pipeline run alone.
+
+## Front end
+
+The Streamlit app provides a form for uploading a protein PDB, entering a known pocket center, choosing model environments and run size, then viewing the report and downloading generated files. Start it from the PharmFlow environment so the backend uses the correct Python stack:
+
+```powershell
+& 'C:\Users\hanut sai\miniconda3\envs\diffphar-fm\python.exe' -m streamlit run app.py
+```
+
+The app writes each run under `pipeline_runs/`. Enter the pocket center in the same PDB coordinate frame; the zero values shown initially are placeholders, not a recommended center. Keep Meeko's unmatched-residue option off unless you have inspected and accepted any residues it may omit.
 
 ## Model
 

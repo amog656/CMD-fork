@@ -1,0 +1,45 @@
+[project]
+name = "sam2"
+version = "1.0.0"
+description = "latent diffusion model for protein structural ensemble generation"
+readme = "README.md"
+license = {text = "Apache 2"}
+authors = [
+    {name = "Giacomo Janson", email = "jansongi@msu.edu"},
+]
+maintainers = [
+    {name = "Giacomo Janson", email = "jansongi@msu.edu"},
+]
+dependencies = [
+    "biopython>=1.85",
+    "diffusers>=0.32.2",
+    "dm-tree",
+    "mdtraj>=1.10.3",
+    "torch>=1.13.1"
+]
+
+[project.urls]
+Homepage = "https://github.com/giacomo-janson/sam2"
+Repository = "https://github.com/giacomo-janson/sam2"
+
+[project.scripts]
+
+sam2-ensemble-analysis = "sam.scripts.ensemble_analysis:main"
+sam2-ensemble-comparison = "sam.scripts.ensemble_comparison:main"
+sam2-generate-ensemble = "sam.scripts.generate_ensemble:main"
+sam2-download-weights = "sam.scripts.download_weights:main"
+
+
+[build-system]
+
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+
+packages = [
+  "src/sam",
+]

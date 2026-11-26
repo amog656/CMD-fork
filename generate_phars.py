@@ -13,7 +13,8 @@ from constants import dataset_params, FLOAT_TYPE, INT_TYPE
 
 def load_fm_checkpoint(ckpt_path, device, dataset_name='crossdock', tanh=None):
     """Load standalone Flow Matching checkpoint (EGNNDynamics weights only)."""
-    ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
+    with utils.pathlib_local_compat():
+        ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
     
     # Infer architecture from state dict
     sd = ckpt['model_state_dict']
@@ -86,16 +87,19 @@ def load_fm_checkpoint(ckpt_path, device, dataset_name='crossdock', tanh=None):
 
 def is_lightning_checkpoint(ckpt_path):
     """Check if checkpoint is a Lightning checkpoint (has hyper_parameters)."""
-    ckpt = torch.load(ckpt_path, map_location='cpu', weights_only=False)
+    with utils.pathlib_local_compat():
+        ckpt = torch.load(ckpt_path, map_location='cpu', weights_only=False)
     return 'hyper_parameters' in ckpt
 
 
-def build_pocket_from_pdb(pdb_file, resi_list, ref_ligand, dataset_name, device):
-    """Build pocket dict from PDB file."""
+def build_pocket_from_pdb(pdb_file, resi_list, ref_ligand, dataset_name, device,
+                          pocket_representation='ca-only', pocket_radius=10.0,
+                          max_nodes=400):
+    """Build pocket dict from PDB file (CA-only or full-atom representation)."""
     from Bio.PDB import PDBParser
     from Bio.PDB.Polypeptide import protein_letters_3to1 as three_to_one
     import torch.nn.functional as F
-    
+
     pdb_struct = PDBParser(QUIET=True).get_structure('', pdb_file)[0]
     if resi_list is not None:
         residues = [
@@ -104,23 +108,51 @@ def build_pocket_from_pdb(pdb_file, resi_list, ref_ligand, dataset_name, device)
     else:
         residues = utils.get_pocket_from_ligand(pdb_struct, ref_ligand)
 
-    pocket_coord = torch.tensor(np.array(
-        [res['CA'].get_coord() for res in residues]),
-        device=device, dtype=FLOAT_TYPE)
-    pocket_types = torch.tensor(
-        [dataset_params[dataset_name]['aa_encoder'][three_to_one[res.get_resname()]]
-         for res in residues], device=device)
-
-    pocket_one_hot = F.one_hot(
-        pocket_types, num_classes=len(dataset_params[dataset_name]['aa_encoder'])
-    )
+    if pocket_representation == 'full-atom':
+        atom_encoder = dataset_params['crossdock_full']['atom_encoder']
+        center = np.mean([res['CA'].get_coord() for res in residues], axis=0)
+        coords = []
+        types = []
+        for atom in pdb_struct.get_atoms():
+            elem = atom.element.strip().capitalize() if atom.element else atom.name[0]
+            if elem == 'H':
+                continue
+            if np.linalg.norm(atom.get_coord() - center) <= pocket_radius:
+                coords.append(atom.get_coord())
+                types.append(atom_encoder.get(elem, atom_encoder.get('others', 10)))
+        if not coords:
+            for res in residues:
+                for atom in res.get_atoms():
+                    elem = atom.element.strip().capitalize() if atom.element else atom.name[0]
+                    if elem == 'H':
+                        continue
+                    coords.append(atom.get_coord())
+                    types.append(atom_encoder.get(elem, atom_encoder.get('others', 10)))
+        coords = np.asarray(coords)
+        types = np.asarray(types)
+        nearest = np.argsort(np.linalg.norm(coords - center, axis=1))[:max_nodes]
+        coords = coords[nearest]
+        types = types[nearest]
+        pocket_coord = torch.tensor(coords, device=device, dtype=FLOAT_TYPE)
+        pocket_types = torch.tensor(types, device=device, dtype=INT_TYPE)
+        pocket_one_hot = F.one_hot(pocket_types, num_classes=len(atom_encoder))
+    else:
+        pocket_coord = torch.tensor(np.array(
+            [res['CA'].get_coord() for res in residues]),
+            device=device, dtype=FLOAT_TYPE)
+        pocket_types = torch.tensor(
+            [dataset_params[dataset_name]['aa_encoder'][three_to_one[res.get_resname()]]
+             for res in residues], device=device)
+        pocket_one_hot = F.one_hot(
+            pocket_types, num_classes=len(dataset_params[dataset_name]['aa_encoder'])
+        )
 
     pocket_size = torch.tensor([len(pocket_coord)], device=device, dtype=INT_TYPE)
     pocket_mask = torch.zeros(len(pocket_coord), device=device, dtype=INT_TYPE)
 
     pocket = {
         'x': pocket_coord.unsqueeze(0),  # (1, M, 3)
-        'one_hot': pocket_one_hot.unsqueeze(0),  # (1, M, 20)
+        'one_hot': pocket_one_hot.unsqueeze(0),  # (1, M, n_types)
         'size': pocket_size,  # (1,)
         'mask': pocket_mask  # (M,)
     }
@@ -142,6 +174,8 @@ if __name__ == "__main__":
     parser.add_argument('--resamplings', type=int, default=10)
     parser.add_argument('--jump_length', type=int, default=1)
     parser.add_argument('--timesteps', type=int, default=None)
+    parser.add_argument('--pocket_radius', type=float, default=10.0,
+                        help='Pocket radius in Angstroms for full-atom pocket construction')
     parser.add_argument('--dataset', type=str, default='crossdock',
                         choices=['crossdock', 'crossdock_full'],
                         help='Dataset name for Flow Matching checkpoint')
@@ -157,12 +191,15 @@ if __name__ == "__main__":
     # Load model based on checkpoint type
     if is_lightning_checkpoint(args.checkpoint):
         print('Loading Lightning checkpoint...')
-        ckpt = torch.load(args.checkpoint, map_location=device, weights_only=False)
-        model_type = ckpt.get('hyper_parameters', {}).get('model_type', 'ddpm')
-        print(f'Model type: {model_type}')
-        
-        model = PharPocketDDPM.load_from_checkpoint(
-            args.checkpoint, map_location=device)
+        with utils.pathlib_local_compat():
+            ckpt = torch.load(args.checkpoint, map_location=device, weights_only=False)
+            model_type = ckpt.get('hyper_parameters', {}).get('model_type', 'ddpm')
+            checkpoint_dataset = ckpt.get('hyper_parameters', {}).get('dataset')
+            if checkpoint_dataset:
+                args.dataset = checkpoint_dataset
+            print(f'Model type: {model_type}; dataset: {args.dataset}')
+            model = PharPocketDDPM.load_from_checkpoint(
+                args.checkpoint, map_location=device)
         model = model.to(device)
         model.eval()
         
@@ -174,44 +211,18 @@ if __name__ == "__main__":
 
         if model_type == 'flow_matching':
             # Use FM generation path
-            # Build pocket from PDB
-            from Bio.PDB import PDBParser
-            from Bio.PDB.Polypeptide import protein_letters_3to1 as three_to_one
-            import torch.nn.functional as F
-            from utils import scatter_mean
             from constants import FLOAT_TYPE, INT_TYPE
-            
-            pdb_struct = PDBParser(QUIET=True).get_structure('', args.pdbfile)[0]
-            if args.resi_list is not None:
-                residues = [
-                    pdb_struct[x.split(':')[0]][(' ', int(x.split(':')[1]), ' ')]
-                    for x in args.resi_list]
-            else:
-                residues = utils.get_pocket_from_ligand(pdb_struct, args.ref_ligand)
-
-            pocket_coord = torch.tensor(np.array(
-                [res['CA'].get_coord() for res in residues]),
-                device=device, dtype=FLOAT_TYPE)
-            pocket_types = torch.tensor(
-                [dataset_params[args.dataset]['aa_encoder'][three_to_one[res.get_resname()]]
-                 for res in residues], device=device)
-
-            pocket_one_hot = F.one_hot(
-                pocket_types, num_classes=len(dataset_params[args.dataset]['aa_encoder'])
-            )
-
-            pocket_size = torch.tensor([len(pocket_coord)] * args.n_samples,
-                                       device=device, dtype=INT_TYPE)
-            pocket_mask = torch.repeat_interleave(
-                torch.arange(args.n_samples, device=device, dtype=INT_TYPE),
-                len(pocket_coord)
-            )
-
+            pocket_representation = ckpt.get('hyper_parameters', {}).get('pocket_representation', 'ca-only')
+            pocket = build_pocket_from_pdb(
+                args.pdbfile, args.resi_list, args.ref_ligand, args.dataset, device,
+                pocket_representation=pocket_representation, pocket_radius=args.pocket_radius)
+            M = pocket['x'].shape[1]
             pocket = {
-                'x': pocket_coord.repeat(args.n_samples, 1),
-                'one_hot': pocket_one_hot.repeat(args.n_samples, 1),
-                'size': pocket_size,
-                'mask': pocket_mask
+                'x': pocket['x'][0].repeat(args.n_samples, 1),
+                'one_hot': pocket['one_hot'][0].repeat(args.n_samples, 1),
+                'size': torch.full((args.n_samples,), M, device=device, dtype=INT_TYPE),
+                'mask': torch.repeat_interleave(
+                    torch.arange(args.n_samples, device=device, dtype=INT_TYPE), M)
             }
 
             if args.num_nodes_phar is not None:

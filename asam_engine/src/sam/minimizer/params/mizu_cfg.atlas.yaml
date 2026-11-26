@@ -1,0 +1,19 @@
+opt:
+  energy_params:
+    angle_const: 1000
+    bond_const: 10000
+    cabl_const: 100000
+    chi_const: 1000
+    improper_dihedral_const: 10
+    nb_const: 100
+    nb_form: l2
+    phi_psi_const: 50
+    proper_dihedral_const: 10
+  history_size: 100
+  max_iter: 10
+  nb_centers_threshold: 1.0
+  step_size: 1.0
+  steps: 20
+top:
+  nb_mode: os
+  nb_os_tol: null

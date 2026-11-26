@@ -1,4 +1,8 @@
 from typing import Union, Iterable, Optional
+import contextlib
+import pathlib
+import sys
+import types
 
 import numpy as np
 import torch
@@ -7,6 +11,35 @@ from rdkit import Chem
 import networkx as nx
 from networkx.algorithms import isomorphism
 from Bio.PDB.Polypeptide import is_aa
+
+
+@contextlib.contextmanager
+def pathlib_local_compat():
+    """Allow older Pythons to unpickle checkpoints that reference pathlib._local."""
+    if sys.version_info >= (3, 13):
+        yield
+        return
+    old_local = sys.modules.get('pathlib._local')
+    old_path = getattr(pathlib, '__path__', None)
+    local_module = types.ModuleType('pathlib._local')
+    local_module.WindowsPath = pathlib.Path
+    local_module.PosixPath = pathlib.Path
+    pathlib.__path__ = []
+    sys.modules['pathlib._local'] = local_module
+    try:
+        yield
+    finally:
+        if old_local is None:
+            sys.modules.pop('pathlib._local', None)
+        else:
+            sys.modules['pathlib._local'] = old_local
+        if old_path is None:
+            try:
+                del pathlib.__path__
+            except AttributeError:
+                pass
+        else:
+            pathlib.__path__ = old_path
 
 
 class Queue():

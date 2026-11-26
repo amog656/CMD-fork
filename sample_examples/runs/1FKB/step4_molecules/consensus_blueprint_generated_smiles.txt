@@ -1,0 +1,2 @@
+CCN=C(NCCc1ccc(F)cc1)c1nn(-c2cc(SC)c3ccccc3n2)c(C)c1C
+CCCCc1cnc2c(c(-c3cccc(C)c3)cc(=O)n2-c2nc(S)c(C#N)c(CC)c2C#N)c1N

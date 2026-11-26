@@ -1,0 +1,159 @@
+data:
+  res_ids_mode: index
+  tbm:
+    mode: single
+    perturb: null
+    type: xyz
+decoder:
+  accessory_activation: relu
+  activation: relu
+  add_bias_2d: true
+  arch: dec_aa_v01
+  bead_embed_dim: 32
+  block_transition: null
+  edge_dim: 128
+  embed_inject_mode: outer_sum
+  linear_bias: true
+  mlp_dim: null
+  node_dim: 256
+  node_init_mode: mlp
+  noise_sigma: null
+  num_blocks: 0
+  num_heads: 16
+  pos_embed_r: 32
+  sm_c_ipa: 16
+  sm_c_resnet: 128
+  sm_dropout_rate: 0.0
+  sm_no_angles: 7
+  sm_no_blocks: 5
+  sm_no_heads_ipa: 12
+  sm_no_qk_points: 4
+  sm_no_resnet_blocks: 2
+  sm_no_transition_layers: 1
+  sm_no_v_points: 8
+  sm_share: true
+  sm_swiglu_transition: false
+  sm_swiglu_transition_hr: 2
+  sm_trans_scale_factor: 10
+encoder:
+  accessory_activation: silu
+  activation: silu
+  add_bias_2d: true
+  arch: enc_aa_v01
+  bead_embed_dim: 32
+  com_dmap_embed_params:
+    cutoff_lower: 0.0
+    cutoff_upper: 7.0
+    num_rbf: 64
+    trainable: true
+    type: expnorm
+  dmap_embed_params:
+    cutoff_lower: 0.0
+    cutoff_upper: 10.0
+    num_rbf: 128
+    trainable: true
+    type: expnorm
+  dmap_inject_mode: shallow
+  dmap_merge_dim: 192
+  dmap_merge_mode: cat_shallow
+  edge_dim: 128
+  edge_residual: false
+  input_embed_params:
+    label_terminus: true
+    local_pos: true
+    local_pos_span: 3
+  linear_bias: true
+  mlp_dim: 512
+  no_dmap_embed_params:
+    cutoff_lower: 0.0
+    cutoff_upper: 3.0
+    num_rbf: 32
+    trainable: true
+    type: expnorm
+  node_dim: 256
+  node_init_mode: mlp
+  node_residual: true
+  node_update_addition: false
+  num_blocks: 4
+  num_heads: 16
+  out_ln: false
+  out_mode: simple
+  pos_embed_r: 32
+generative_model:
+  loss: l2
+  sched_params:
+    beta_end: 0.02
+    beta_schedule: sigmoid
+    beta_start: 0.0001
+    name: ddpm
+    num_train_timesteps: 1000
+    prediction_type: epsilon
+    variance_type: fixed_small
+  type: diffusers_dm
+generative_stack:
+  bead_type: ca
+  data_type: aa_protein
+  encoding_dim: 32
+  use_enc_scaler: true
+generator:
+  activation: silu
+  arch: eps_v02
+  attention_mode: adanorm
+  bead_embed_dim: 32
+  conditioned_transition: false
+  edge_dim: 128
+  edge_embed_mode: idpsam
+  edge_residual: false
+  edge_update_addition: false
+  edge_update_freq: null
+  edge_update_mode: null
+  edge_update_params: null
+  input_embed_mode: mlp
+  linear_bias: true
+  node_dim: 512
+  node_embed_mode: cat_mlp
+  num_blocks: 22
+  num_heads: 32
+  out_mode: mlp
+  pos_embed_r: 32
+  tem_inject_mode: xyz
+  tem_inject_params:
+    com_dmap_embed_params:
+      cutoff_lower: 0.0
+      cutoff_upper: 7.0
+      num_rbf: 64
+      trainable: true
+      type: expnorm
+    dmap_embed_params:
+      cutoff_lower: 0.0
+      cutoff_upper: 14.0
+      num_rbf: 144
+      trainable: true
+      type: expnorm
+    inject_edge_mode: null
+    inject_node_mode: add
+    no_dmap_embed_params:
+      cutoff_lower: 0.0
+      cutoff_upper: 3.0
+      num_rbf: 32
+      trainable: true
+      type: expnorm
+    node_angle_bins: 16
+    node_angle_mask: extra
+    node_dim: 512
+    node_embed_resolution: aa
+    node_mlp_depth: 2
+    node_mlp_mult: 1
+  time_embed_dim: 512
+  time_embed_mode: sinusoidal
+  time_embed_params:
+    time_freq_dim: 256
+  token_dim: 1024
+  token_residual: false
+  token_update_addition: false
+minimization:
+  protocol: atlas
+platform:
+  device: cuda
+weights:
+  version: atlas_1.0

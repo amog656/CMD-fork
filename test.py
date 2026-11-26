@@ -65,13 +65,16 @@ if __name__ == "__main__":
     parser.add_argument('--resamplings', type=int, default=1)
     parser.add_argument('--jump_length', type=int, default=1)
     args = parser.parse_args()
+    if args.test_dir is None:
+        parser.error('--test_dir is required')
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
     # Load model
-    model = PharPocketDDPM.load_from_checkpoint(
-        args.checkpoint, map_location=device)
+    with utils.pathlib_local_compat():
+        model = PharPocketDDPM.load_from_checkpoint(
+            args.checkpoint, map_location=device)
     model = model.to(device)
 
     test_files = list(args.test_dir.glob('[!.]*.sdf'))

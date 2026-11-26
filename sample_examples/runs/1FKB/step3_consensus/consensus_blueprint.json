@@ -1,0 +1,92 @@
+{
+  "n_features": 7,
+  "features": [
+    {
+      "center": [
+        4.123514652252197,
+        8.009772300720215,
+        12.307064056396484
+      ],
+      "type": "HYBL",
+      "raw_type": "Hydrophobe",
+      "state_coverage": 1.0,
+      "dispersion": 1.0511306524276733,
+      "point_count": 5
+    },
+    {
+      "center": [
+        2.7577931880950928,
+        8.348787307739258,
+        11.920454978942871
+      ],
+      "type": "UNKNOWN",
+      "raw_type": "others",
+      "state_coverage": 1.0,
+      "dispersion": 0.7581576704978943,
+      "point_count": 5
+    },
+    {
+      "center": [
+        3.6428236961364746,
+        10.962296485900879,
+        12.431343078613281
+      ],
+      "type": "HYBL",
+      "raw_type": "Hydrophobe",
+      "state_coverage": 1.0,
+      "dispersion": 0.8463025093078613,
+      "point_count": 4
+    },
+    {
+      "center": [
+        3.158789873123169,
+        10.076480865478516,
+        10.569519996643066
+      ],
+      "type": "HACC",
+      "raw_type": "Acceptor",
+      "state_coverage": 1.0,
+      "dispersion": 0.42812448740005493,
+      "point_count": 3
+    },
+    {
+      "center": [
+        2.4819037914276123,
+        10.479989051818848,
+        13.682287216186523
+      ],
+      "type": "HACC",
+      "raw_type": "Acceptor",
+      "state_coverage": 1.0,
+      "dispersion": 0.7963794469833374,
+      "point_count": 3
+    },
+    {
+      "center": [
+        2.3581252098083496,
+        6.033207893371582,
+        11.5024995803833
+      ],
+      "type": "HYBL",
+      "raw_type": "Hydrophobe",
+      "state_coverage": 1.0,
+      "dispersion": 0.19728152453899384,
+      "point_count": 2
+    },
+    {
+      "center": [
+        1.3879963159561157,
+        11.852625846862793,
+        11.995697021484375
+      ],
+      "type": "HYBL",
+      "raw_type": "Hydrophobe",
+      "state_coverage": 1.0,
+      "dispersion": 0.370065838098526,
+      "point_count": 2
+    }
+  ],
+  "source_states": [
+    "1FKB_receptor_state_1"
+  ]
+}

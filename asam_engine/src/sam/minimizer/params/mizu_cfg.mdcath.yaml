@@ -1,0 +1,47 @@
+opt:
+  energy_params:
+    angle_const: 1000
+    bond_const: 10000
+    chi_const: 1000
+    improper_dihedral_const: 10
+    nb_const: 250
+    nb_form: l2
+    early_stopping_hc_score: 0.7
+    early_stopping_hc_thresh: 0.175
+    phi_psi_const: 50
+    proper_dihedral_const: 10
+    cabl_const: 100000
+  history_size: 100
+  max_iter: 10
+  nb_centers_threshold: 1.0
+  step_size: 1.0
+  steps: 30
+  cabl_init_range: [0.357, 0.411]
+  # gradient_clip_mode: value
+  # gradient_clip: 100000.0  # 80000.0
+  opt: lbfgs
+
+opt_ini:
+  energy_params:
+    angle_const: 1000
+    bond_const: 10000
+    chi_const: 1000
+    improper_dihedral_const: 10
+    nb_const: 100
+    nb_form: l2
+    early_stopping_hc_score: 0.7
+    early_stopping_hc_thresh: 0.175
+    phi_psi_const: 50
+    proper_dihedral_const: 10
+    cabl_const: 100000
+  nb_centers_threshold: 1.0
+  cabl_init_range: [0.357, 0.411]
+  step_size: 0.001
+  steps: 50
+  beta1: 0.5
+  beta2: 0.9
+  opt: adam
+
+top:
+  nb_mode: os
+  nb_os_tol: null
