@@ -140,10 +140,20 @@ input:focus { outline: 0; border-color: var(--hi); background: rgba(128, 84, 184
 #rl li.on { color: var(--dm); }
 #rl li.now { color: var(--hi); }
 #pc { position: static; font-size: clamp(22px, 2.4vw, 34px); line-height: 1; color: var(--hi); -webkit-text-stroke: 0; flex-shrink: 0; pointer-events: none; }
-#lg { position: absolute; right: 4vw; bottom: 3.5vh; width: min(340px, 34vw); list-style: none; font: 700 11px var(--fd); text-transform: uppercase; letter-spacing: .04em; pointer-events: none; }
-#lg li { border-top: 1px solid var(--ln); padding: 5px 0; color: #6b6275; animation: lgin .25s ease-out; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#lg li:last-child { color: var(--hi); }
-#lg b { color: var(--tx); margin-right: 10px; }
+#run-states { position: absolute; top: 100px; right: 4vw; width: min(440px, 39vw); max-height: calc(100vh - 220px); display: flex; flex-direction: column; gap: 10px; padding: 16px; background: var(--pn); backdrop-filter: blur(14px); border: 1px solid var(--ln2); box-shadow: 8px 8px 0 var(--dp); }
+.run-states-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; color: var(--dm); font: 700 10px var(--fd); letter-spacing: .08em; }
+.run-states-head b { color: var(--hi); font: 600 10px var(--fb); letter-spacing: 0; text-align: right; }
+#run-state-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; overflow: auto; }
+.run-state-card { min-width: 0; padding: 7px; background: rgba(255,255,255,.025); border: 1px solid var(--ln); transition: border-color .3s, background .3s; }
+.run-state-card.active-pulse { animation: statePulse 1.8s ease-in-out infinite alternate; }
+@keyframes statePulse { from { border-color: var(--ln2); background: rgba(255,255,255,.02); } to { border-color: var(--hi); background: rgba(180,76,255,.09); } }
+.run-state-card > div { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+.run-state-card b { font: 700 11px var(--fd); }
+.run-state-card small { min-height: 0; color: var(--dm); font: 9px var(--fb); }
+.run-state-card svg { display: block; width: 100%; height: 86px; overflow: visible; }
+.run-state-card polyline { fill: none; stroke: var(--hi); stroke-width: 1.35; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.run-state-card circle { fill: var(--tx); opacity: .8; }
+#run-state-note { color: var(--dm); font-size: 10px; line-height: 1.4; margin: 0; }
 @keyframes lgin { from { opacity: 0; transform: translateX(16px); } }
 
 /* Candidates */
@@ -241,7 +251,9 @@ body[data-r="cand"] #cand, body[data-r="ana"] #ana { cursor: grab; }
   .sx { align-items: flex-start !important; text-align: left !important; justify-content: flex-end; padding-bottom: 12vh; }
   .hl { font-size: clamp(34px, 11vw, 72px); }
   .bd { max-width: 34ch; }
-  #lg { display: none; }
+  #run-states { top: 80px; right: 4vw; left: 4vw; width: auto; max-height: 42vh; padding: 10px; }
+  #run-state-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .run-state-card svg { height: 64px; }
   .rt { width: auto; right: 4vw; max-width: none; }
   #pc { font-size: 22px; }
   #ap, #vp { position: absolute; left: 4vw; right: 4vw; bottom: 4vw; width: auto; max-height: 56vh; overflow: auto; }

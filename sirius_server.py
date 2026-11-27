@@ -95,6 +95,38 @@ def _candidate_results(out_dir: Path) -> list[dict]:
     return sorted(results, key=lambda item: item["rank"])
 
 
+def _asam_state_traces(out_dir: Path) -> list[dict]:
+    """Return sampled C-alpha traces from the final aSAM ensemble for the loader UI."""
+    ensemble_dirs = []
+    for directory in out_dir.glob("step1_ensemble*"):
+        match = re.fullmatch(r"step1_ensemble(?:_retry(\d+))?", directory.name)
+        if match and directory.is_dir():
+            attempt = int(match.group(1) or 0)
+            files = list(directory.glob("*_state_*.pdb"))
+            if files:
+                ensemble_dirs.append((attempt, directory, files))
+    if not ensemble_dirs:
+        return []
+    _, _, files = max(ensemble_dirs, key=lambda item: item[0])
+    traces = []
+    for path in sorted(files, key=lambda p: int(re.search(r"_state_(\d+)\.pdb$", p.name).group(1))):
+        coords = []
+        try:
+            for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+                if line.startswith(("ATOM  ", "HETATM")) and line[12:16].strip() == "CA":
+                    coords.append([round(float(line[start:start + 8]), 3) for start in (30, 38, 46)])
+        except (OSError, ValueError):
+            continue
+        atom_count = len(coords)
+        if len(coords) > 240:
+            step = (len(coords) - 1) / 239
+            coords = [coords[round(i * step)] for i in range(240)]
+        if coords:
+            state_match = re.search(r"_state_(\d+)\.pdb$", path.name)
+            traces.append({"name": f"State {int(state_match.group(1))}", "atoms": atom_count, "coords": coords})
+    return traces
+
+
 def _run_job(run_id: str, command: list[str], out_dir: Path):
     env = os.environ.copy()
     env["PYTHONUNBUFFERED"] = "1"
@@ -173,6 +205,7 @@ class Handler(SimpleHTTPRequestHandler):
                                     "sdf_url": f"/api/runs/{run_id}/sdf"}
             if not snapshot:
                 return self._json({"error": "Run not found or its completed candidate files are unavailable."}, 404)
+            snapshot["states"] = _asam_state_traces(Path(snapshot["out_dir"]))
             if artifact:
                 out_dir = Path(snapshot["out_dir"])
                 file_path = out_dir / ("PIPELINE_VALIDATION_REPORT.md" if artifact == "report" else

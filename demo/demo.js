@@ -56,6 +56,45 @@ moleculeWindow.addEventListener('pointerdown',e=>{drag={x:e.clientX,last:e.clien
 moleculeWindow.addEventListener('pointermove',e=>{if(!drag)return;rotation+=(e.clientX-drag.last)*.35;drag.last=e.clientX;updateMoleculeTransform();});
 for(const event of ['pointerup','pointercancel','lostpointercapture'])moleculeWindow.addEventListener(event,()=>drag=null);
 
+function generateDemoTraces(numStates) {
+  const traces = [];
+  for (let s = 1; s <= numStates; s++) {
+    const pts = [];
+    for (let i = 0; i < 24; i++) {
+      const angle = (i / 23) * Math.PI * 2.2;
+      const r = 26 + Math.sin(angle * 2.5 + s * 1.5) * 14 + (s % 2 ? 6 : -6);
+      const x = 95 + Math.cos(angle) * r + Math.sin(s * 1.8 + i * 0.3) * 6;
+      const y = 34 + Math.sin(angle) * (r * 0.6) + Math.cos(s * 1.4 + i * 0.2) * 5;
+      pts.push([x.toFixed(1), y.toFixed(1)]);
+    }
+    traces.push({
+      name: `State ${s}`,
+      points: pts.map(p => p.join(',')).join(' '),
+      markers: pts.filter((_, idx) => idx % 4 === 0).map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2"/>`).join('')
+    });
+  }
+  return traces;
+}
+
+function renderDemoStates(numStates) {
+  const container = $('#demo-state-grid');
+  if (!container) return;
+  const traces = generateDemoTraces(numStates);
+  $('#demo-state-count').textContent = `${numStates} breathing states from aSAM`;
+  container.innerHTML = traces.map(t => `
+    <div class="demo-state-card active">
+      <div>
+        <strong>${t.name}</strong>
+        <small>Cα trace</small>
+      </div>
+      <svg viewBox="0 0 190 68" role="img" aria-label="${t.name}">
+        <polyline points="${t.points}" />
+        ${t.markers}
+      </svg>
+    </div>
+  `).join('');
+}
+
 const pipeline=[
   {label:'Simulating aSAM receptor states…',step:0},
   {label:'Simulating pharmacophore generation…',step:1},
@@ -65,6 +104,8 @@ const pipeline=[
 ];
 $('#run-button').addEventListener('click',()=>{
   clearInterval(runTimer);
+  const nStates = Number(state.value) || 2;
+  renderDemoStates(nStates);
   const section=$('#run');section.hidden=false;section.scrollIntoView({behavior:'smooth'});
   $('#run-title').textContent='Simulating a run';$('#run-button').disabled=true;
   $('#run-button').innerHTML='Simulation in progress…';

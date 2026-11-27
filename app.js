@@ -563,6 +563,43 @@ function enterInput() {
 }
 
 /* --- Run --- */
+function asamTraceSVG(coords) {
+  if (!Array.isArray(coords) || coords.length < 2) return '';
+  const projected = coords.map(([x, y, z]) => [x * .82 - y * .48, z * .84 - x * .36 - y * .62]);
+  const xs = projected.map(p => p[0]), ys = projected.map(p => p[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const scale = Math.min(204 / (maxX - minX || 1), 84 / (maxY - minY || 1));
+  const points = projected.map(([x, y]) => `${(110 + (x - (minX + maxX) / 2) * scale).toFixed(1)},${(49 - (y - (minY + maxY) / 2) * scale).toFixed(1)}`).join(' ');
+  const markers = projected.filter((_, i) => i % Math.max(1, Math.floor(projected.length / 14)) === 0).map(([x, y]) =>
+    `<circle cx="${(110 + (x - (minX + maxX) / 2) * scale).toFixed(1)}" cy="${(49 - (y - (minY + maxY) / 2) * scale).toFixed(1)}" r="1.6"/>`).join('');
+  return `<svg viewBox="0 0 220 98" role="img" aria-label="Projected alpha-carbon trace of an aSAM protein state"><polyline points="${points}"/>${markers}</svg>`;
+}
+
+function renderASAMStates(states) {
+  const grid = $('#run-state-grid'), count = $('#run-state-count'), note = $('#run-state-note');
+  if (!grid || !count || !note) return;
+  if (!states || !states.length) {
+    const P = AppState.getProtein();
+    const n = Math.max(2, Math.min(8, parseInt($('#states')?.value || '2', 10) || 2));
+    const preview = [];
+    for (let s = 1; s <= n; s++) {
+      const coords = P.map(([x, y, z], i) => [
+        x + Math.sin(s * 1.5 + i * 0.14) * 1.6,
+        y + Math.cos(s * 1.2 + i * 0.17) * 1.6,
+        z + Math.sin(s * 0.8 + i * 0.21) * 1.6
+      ]);
+      preview.push({ name: `State ${s} (sampling)`, atoms: coords.length, coords });
+    }
+    count.textContent = `Sampling ${n} conformational states...`;
+    note.textContent = 'aSAM is relaxing the protein backbone into distinct breathing pocket conformations.';
+    grid.innerHTML = preview.map(state => `<article class="run-state-card active-pulse"><div><b>${esc(state.name)}</b><small>${Number(state.atoms) || state.coords.length} Cα points</small></div>${asamTraceSVG(state.coords)}</article>`).join('');
+    return;
+  }
+  count.textContent = `${states.length} state${states.length === 1 ? '' : 's'} from aSAM`;
+  note.textContent = 'Projected from authentic aSAM-generated Cα breathing coordinates.';
+  grid.innerHTML = states.map(state => `<article class="run-state-card"><div><b>${esc(state.name)}</b><small>${Number(state.atoms) || state.coords.length} Cα points</small></div>${asamTraceSVG(state.coords)}</article>`).join('');
+}
+
 function enterRun() {
   const status = $('#rs'), detail = $('#rp'), progress = $('#rb'), percent = $('#pc');
   const stages = $$('#rl li');
@@ -571,6 +608,7 @@ function enterRun() {
   detail.textContent = 'The uploaded complex has been validated. Waiting for the model pipeline.';
   progress.style.width = '3%'; percent.textContent = '003%';
   stages.forEach((item, index) => { item.className = index === 0 ? 'now' : ''; });
+  renderASAMStates([]);
   let stopped = false;
   const poll = async () => {
     if (stopped || route !== 'run' || !activeRunId) return;
@@ -578,6 +616,7 @@ function enterRun() {
       const response = await fetch(`/api/runs/${activeRunId}`, { cache: 'no-store' });
       const run = await response.json();
       if (!response.ok) throw new Error(run.error || 'Could not read run status.');
+      renderASAMStates(run.states || []);
       status.textContent = run.phase || 'Running CMD-Gen';
       detail.textContent = run.status === 'error' ? (run.error || 'The pipeline stopped. See the run log below.') : `Ligand ${run.ligand || ''}; ${run.progress || 0}% complete`;
       progress.style.width = `${run.progress || 0}%`; percent.textContent = `${String(run.progress || 0).padStart(3, '0')}%`;
@@ -589,7 +628,7 @@ function enterRun() {
         AppState.setCands(run.candidates);
         const download = $('#skip'); download.href = run.report_url; download.hidden = false; download.textContent = 'Download pipeline report';
         $('#rp').textContent = `${run.candidates.length} valid generated molecules were docked and ranked across the receptor states.`;
-        setTimeout(() => go('cand'), 800);
+        setTimeout(() => go('cand'), 1800);
         return;
       }
       if (run.status === 'error') {
@@ -603,7 +642,7 @@ function enterRun() {
     setTimeout(poll, 1800);
   };
   poll();
-  return;
+
   const cfg = AppState.getConfig(), K = cfg.k || 12, seed = cfg.seed || 7, P = AppState.getProtein(seed);
   const visH = () => 2 * cam.position.z * Math.tan(cam.fov * Math.PI / 360), visW = () => visH() * cam.aspect;
   const TOP = 3.5, BOT = 0.45, COL = [0x7770A9, 0x9691C0, 0xF0EADF], GREY = 0x2a2a2e;
@@ -678,7 +717,7 @@ function enterRun() {
       step = k; document.body.style.setProperty('--st', STC[k]); $('#rs').classList.remove('sw'); void $('#rs').offsetWidth; $('#rs').classList.add('sw'); $('#rs').textContent = RP[k][1]; $('#rp').textContent = RP[k][2];
       $$('#rl li').forEach((li, i) => li.className = i < k ? 'on' : i === k ? 'now' : '');
     }
-    if (t > 14.2) finishRun();
+    if (!activeRunId && t > 14.2) finishRun();
   };
 }
 
