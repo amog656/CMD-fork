@@ -137,12 +137,38 @@ def generate_markdown_report(
     print(f"\n[Report] Comprehensive markdown report written to: {output_path}")
 
 
+def extract_ligand_center(ligand_file: Path) -> List[float]:
+    coords = []
+    if ligand_file.suffix.lower() == ".sdf":
+        from rdkit import Chem
+        suppl = Chem.SDMolSupplier(str(ligand_file), removeHs=True, sanitize=False)
+        mol = next((m for m in suppl if m is not None), None)
+        if mol and mol.GetNumConformers() > 0:
+            coords = mol.GetConformer().GetPositions()
+    else:
+        lines = ligand_file.read_text(encoding="utf-8", errors="ignore").splitlines()
+        for l in lines:
+            if l.startswith(("HETATM", "ATOM  ")):
+                elem = l[76:78].strip().upper()
+                if elem not in ("H", "D"):
+                    try:
+                        coords.append([float(l[30:38]), float(l[38:46]), float(l[46:54])])
+                    except ValueError:
+                        pass
+    coords = np.asarray(coords, dtype=float)
+    if len(coords) == 0:
+        raise ValueError(f"Could not extract any non-hydrogen coordinates from {ligand_file}")
+    center = np.mean(coords, axis=0)
+    return [round(float(c), 3) for c in center]
+
+
 def main():
     parser = argparse.ArgumentParser(description="CMD-Gen Enhanced 5-Stage Pipeline Runner")
     parser.add_argument("--pdb", type=str, default=r"asam_engine\examples\input\6h49_A.pdb", help="Target receptor PDB")
-    parser.add_argument("--pocket_center", type=float, nargs=3, required=True, metavar=('X', 'Y', 'Z'), help="Known binding-pocket center in PDB Angstrom coordinates")
+    parser.add_argument("--pocket_center", type=float, nargs=3, default=None, metavar=('X', 'Y', 'Z'), help="Known binding-pocket center in PDB Angstrom coordinates (optional if --ligand is supplied)")
+    parser.add_argument("--ligand", type=str, default=None, help="Optional bound reference ligand file (.pdb or .sdf) used to automatically calculate the pocket center")
     parser.add_argument("--pocket_radius", type=float, default=10.0, help="Pocket selection radius in Angstroms")
-    parser.add_argument("--pocket_note", type=str, default="User supplied; independently validate the binding site", help="Provenance note for the pocket center, recorded in the report")
+    parser.add_argument("--pocket_note", type=str, default=None, help="Provenance note for the pocket center, recorded in the report")
     parser.add_argument("--k_states", type=int, default=2, help="Number of breathing conformational states (default: 2)")
     parser.add_argument("--ckpt", type=str, default=str(DEFAULT_PHARMFLOW_CKPT), help="PharmFlow Flow Matching checkpoint")
     parser.add_argument("--gcpg_python", type=str, default=str(DEFAULT_GCPG_PYTHON), help="Python executable for the GCPG runtime")
@@ -165,6 +191,20 @@ def main():
     ):
         if not Path(path).is_file():
             parser.error(f"{label} not found: {path}")
+
+    if args.ligand is not None:
+        lig_path = Path(args.ligand)
+        if not lig_path.is_file():
+            parser.error(f"Supplied --ligand file not found: {lig_path}")
+        args.pocket_center = extract_ligand_center(lig_path)
+        if args.pocket_note is None:
+            args.pocket_note = f"Centroid auto-calculated from reference ligand ({lig_path.name})"
+        print(f"[Pocket] Automatically extracted pocket center from {lig_path.name}: {args.pocket_center}")
+    elif args.pocket_center is None:
+        parser.error("Either --pocket_center X Y Z or --ligand <path> must be specified.")
+
+    if args.pocket_note is None:
+        args.pocket_note = "User supplied; independently validate the binding site"
 
     # Keep --help usable in lightweight environments without importing the ML stack.
     from gates import PipelineGates, GateResult

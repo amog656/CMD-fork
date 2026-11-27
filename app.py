@@ -149,6 +149,30 @@ SAMPLE_EXAMPLES = {
         "ligand": "Erlotinib (AQ4)",
         "source": "RCSB PDB 1M17; center is the bound ligand heavy-atom centroid",
     },
+    "Abl kinase · imatinib / Gleevec (2HYY)": {
+        "pdb": "sample_examples/receptors/2HYY_receptor.pdb",
+        "center": (14.251, 15.283, 17.632),
+        "ligand": "Imatinib (STI)",
+        "source": "RCSB PDB 2HYY; center is the bound ligand heavy-atom centroid",
+    },
+    "HIV-1 protease · flap inhibitor (1HVR)": {
+        "pdb": "sample_examples/receptors/1HVR_receptor.pdb",
+        "center": (-9.192, 15.906, 27.946),
+        "ligand": "XK263 inhibitor (XK2)",
+        "source": "RCSB PDB 1HVR; center is the bound ligand heavy-atom centroid",
+    },
+    "Hsp90 chaperone · purine inhibitor (1UY6)": {
+        "pdb": "sample_examples/receptors/1UY6_receptor.pdb",
+        "center": (3.400, 11.180, 24.857),
+        "ligand": "PU3 inhibitor (PU3)",
+        "source": "RCSB PDB 1UY6; center is the bound ligand heavy-atom centroid",
+    },
+    "COX-2 synthase · indomethacin (4COX)": {
+        "pdb": "sample_examples/receptors/4COX_receptor.pdb",
+        "center": (24.849, 22.295, 15.126),
+        "ligand": "Indomethacin (IMN)",
+        "source": "RCSB PDB 4COX; center is the bound ligand heavy-atom centroid",
+    },
 }
 
 st.subheader("1. Protein and pocket")
@@ -163,52 +187,53 @@ with st.form("pipeline_form"):
         pdb_upload = st.file_uploader("Protein structure (.pdb)", type=["pdb"])
         initial_center = (0.0, 0.0, 0.0)
         center_source = "User supplied; verify from a bound ligand or known binding site"
+        pocket_cols = st.columns(4)
+        with pocket_cols[0]:
+            center_x = st.number_input("Pocket center X (Å)", value=initial_center[0], format="%.3f", key=f"center_x_{sample_name}")
+        with pocket_cols[1]:
+            center_y = st.number_input("Pocket center Y (Å)", value=initial_center[1], format="%.3f", key=f"center_y_{sample_name}")
+        with pocket_cols[2]:
+            center_z = st.number_input("Pocket center Z (Å)", value=initial_center[2], format="%.3f", key=f"center_z_{sample_name}")
+        with pocket_cols[3]:
+            pocket_radius = st.number_input("Pocket radius (Å)", min_value=3.0, max_value=25.0, value=10.0, step=1.0)
+        pocket_note = st.text_input("Pocket center source", value=center_source)
+        st.info("Enter the pocket center in the uploaded PDB's coordinate frame. The center of a known bound ligand is a useful starting point.")
     else:
-        st.info(f"Using built-in {sample['ligand']} example. Pocket center comes from its bound ligand.")
         initial_center = sample["center"]
         center_source = sample["source"]
-    pocket_cols = st.columns(4)
-    with pocket_cols[0]:
-        center_x = st.number_input("Pocket center X (Å)", value=initial_center[0], format="%.3f", key=f"center_x_{sample_name}")
-    with pocket_cols[1]:
-        center_y = st.number_input("Pocket center Y (Å)", value=initial_center[1], format="%.3f", key=f"center_y_{sample_name}")
-    with pocket_cols[2]:
-        center_z = st.number_input("Pocket center Z (Å)", value=initial_center[2], format="%.3f", key=f"center_z_{sample_name}")
-    with pocket_cols[3]:
-        pocket_radius = st.number_input("Pocket radius (Å)", min_value=3.0, max_value=25.0, value=10.0, step=1.0)
-    pocket_note = st.text_input(
-        "Pocket center source",
-        value=center_source,
-    )
-    if sample is None:
-        st.info("The zero coordinates are placeholders. Enter a known pocket center measured in the uploaded PDB; do not use the example 6H49 centroid as a drug-binding site.")
+        center_x, center_y, center_z = initial_center
+        pocket_radius = 10.0
+        pocket_note = center_source
+        st.info(f"Ready-to-run built-in example: {sample['ligand']}. The pocket center and receptor are filled in automatically.")
+        st.caption(f"Pocket center: ({center_x:.3f}, {center_y:.3f}, {center_z:.3f}) Å · radius: {pocket_radius:.1f} Å")
 
-    st.subheader("2. Models and run size")
-    config_cols = st.columns(3)
-    with config_cols[0]:
-        checkpoint_text = st.text_input("PharmFlow checkpoint", value=str(DEFAULT_PHARMFLOW_CKPT))
-        states = st.slider("Protein states", min_value=1, max_value=12, value=2)
-    with config_cols[1]:
-        gcpg_python_text = st.text_input("GCPG Python", value=str(DEFAULT_GCPG_PYTHON))
-        molecules = st.number_input("Molecules to generate", min_value=1, max_value=100, value=6, step=1)
-        exhaustiveness = st.slider("Vina exhaustiveness", min_value=1, max_value=16, value=1,
-                                   help="Lower is faster. 1 is fast; use 8 for production runs.")
-    with config_cols[2]:
-        meeko_python_text = st.text_input("Meeko Python", value=str(DEFAULT_MEEKO_PYTHON))
-        st.caption("Use the diff_phar environment; its RDKit is compatible with Meeko 0.8.")
-        device = st.selectbox(
-            "Compute device (PharmFlow + aSAM)",
-            ["cuda", "cpu"],
-            index=0,
-            help="cuda uses the GPU for PharmFlow and aSAM; aSAM falls back to CPU if CUDA fails. GCPG and Vina are CPU-only.",
+    with st.expander("Advanced settings (optional)"):
+        st.caption("Defaults are prefilled. Change these only if you need a different run size or installed model path.")
+        config_cols = st.columns(3)
+        with config_cols[0]:
+            checkpoint_text = st.text_input("PharmFlow checkpoint", value=str(DEFAULT_PHARMFLOW_CKPT))
+            states = st.slider("Protein states", min_value=1, max_value=12, value=2)
+        with config_cols[1]:
+            gcpg_python_text = st.text_input("GCPG Python", value=str(DEFAULT_GCPG_PYTHON))
+            molecules = st.number_input("Molecules to generate", min_value=1, max_value=100, value=6, step=1)
+            exhaustiveness = st.slider("Vina exhaustiveness", min_value=1, max_value=16, value=1,
+                                       help="Lower is faster. 1 is fast; use 8 for more thorough docking.")
+        with config_cols[2]:
+            meeko_python_text = st.text_input("Meeko Python", value=str(DEFAULT_MEEKO_PYTHON))
+            st.caption("Use the diff_phar environment; its RDKit is compatible with Meeko 0.8.")
+            device = st.selectbox(
+                "Compute device (PharmFlow + aSAM)",
+                ["cuda", "cpu"],
+                index=0,
+                help="cuda uses the GPU for PharmFlow and aSAM; aSAM falls back to CPU if CUDA fails. GCPG and Vina are CPU-only.",
+            )
+        vina_text = st.text_input("AutoDock Vina executable", value=str(DEFAULT_VINA))
+        allow_bad_residues = st.checkbox(
+            "Allow Meeko to omit unmatched receptor residues",
+            value=sample is not None,
+            help="Prepared examples may include residues without a Meeko template. Omitted residues can affect docking; inspect the run output before interpreting scores.",
         )
-    vina_text = st.text_input("AutoDock Vina executable", value=str(DEFAULT_VINA))
-    st.caption("Live run defaults: 2 protein states, 6 molecules, Vina exhaustiveness 1 (about 2 minutes with GPU aSAM; set 1 state/4 molecules for ~1 minute). Increase these for a production run.")
-    allow_bad_residues = st.checkbox(
-        "Allow Meeko to omit unmatched receptor residues",
-        value=sample is not None,
-        help="The prepared examples need this because aSAM output contains residues without a Meeko template. Omitted residues may affect docking; inspect the run output before interpreting scores.",
-    )
+        st.caption("Default quick run: 2 protein states, 6 molecules, Vina exhaustiveness 1.")
 
     submitted = st.form_submit_button("Generate and dock molecules", type="primary", use_container_width=True)
 

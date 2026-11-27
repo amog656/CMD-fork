@@ -39,7 +39,7 @@ Launch the front end from the project root with the `diffphar-fm` environment:
 & "C:\Users\hanut sai\miniconda3\envs\diffphar-fm\python.exe" -m streamlit run app.py
 ```
 
-In the app, select **FKBP12 · rapamycin (1FKB)**, keep the live-run defaults (2 protein states, 6 molecules, Vina exhaustiveness 1), and click **Generate and dock molecules**. The real five-stage pipeline runs on the spot:
+In the app, select a built-in protein–ligand example, keep the defaults (2 protein states, 6 molecules, Vina exhaustiveness 1), and click **Generate and dock molecules**. Pocket coordinates and radius are prefilled. Detailed paths and run controls are inside **Advanced settings (optional)**. The real five-stage pipeline runs on the spot:
 
 1. aSAM generates the conformational ensemble.
 2. PharmFlow samples 3D pharmacophores.
@@ -80,7 +80,7 @@ The CLI resolves the project checkpoint, GCPG Python, Meeko Python, and Vina aut
 
 ### Try the front end with sample protein pockets
 
-Install the front-end dependency (`pip install streamlit`) and launch `streamlit run app.py`. In **Choose a structure**, select one of the built-in FKBP12–rapamycin or EGFR–erlotinib examples. The app fills in the prepared receptor and ligand-derived pocket center. See [sample_examples/README.md](sample_examples/README.md) for structure sources, files, and centers. The five pipeline stages still require the model checkpoints and executables configured in the app.
+Install the front-end dependency (`pip install streamlit`) and launch `streamlit run app.py`. In **Choose a structure**, select one of the built-in FKBP12–rapamycin, EGFR–erlotinib, or p38α kinase–L12 examples. The app fills in the prepared receptor and ligand-derived pocket center. See [sample_examples/README.md](sample_examples/README.md) for data sources, files, and centers. The five pipeline stages still require the model checkpoints and executables configured in the app.
 
 ```bash
 # Install dependencies

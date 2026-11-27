@@ -1,0 +1,114 @@
+[
+  {
+    "target_id": "2HYY",
+    "target_name": "Abl Kinase",
+    "ligand_code": "STI",
+    "ligand_name": "Imatinib (Gleevec)",
+    "receptor_pdb": "sample_examples/receptors/2HYY_receptor.pdb",
+    "ligand_pdb": "sample_examples/ligands/2HYY_STI_bound_reference.pdb",
+    "pocket_center": [
+      14.251,
+      15.283,
+      17.632
+    ],
+    "pocket_radius": 10.0,
+    "num_receptor_atoms": 8354,
+    "num_ligand_atoms": 37
+  },
+  {
+    "target_id": "1HVR",
+    "target_name": "HIV-1 Protease",
+    "ligand_code": "XK2",
+    "ligand_name": "XK263 Flap Inhibitor",
+    "receptor_pdb": "sample_examples/receptors/1HVR_receptor.pdb",
+    "ligand_pdb": "sample_examples/ligands/1HVR_XK2_bound_reference.pdb",
+    "pocket_center": [
+      -9.192,
+      15.906,
+      27.946
+    ],
+    "pocket_radius": 10.0,
+    "num_receptor_atoms": 1826,
+    "num_ligand_atoms": 46
+  },
+  {
+    "target_id": "1UY6",
+    "target_name": "Hsp90 Chaperone",
+    "ligand_code": "PU3",
+    "ligand_name": "PU3 Purine Inhibitor",
+    "receptor_pdb": "sample_examples/receptors/1UY6_receptor.pdb",
+    "ligand_pdb": "sample_examples/ligands/1UY6_PU3_bound_reference.pdb",
+    "pocket_center": [
+      3.4,
+      11.18,
+      24.857
+    ],
+    "pocket_radius": 10.0,
+    "num_receptor_atoms": 1641,
+    "num_ligand_atoms": 27
+  },
+  {
+    "target_id": "4COX",
+    "target_name": "COX-2 Prostaglandin Synthase",
+    "ligand_code": "IMN",
+    "ligand_name": "Indomethacin",
+    "receptor_pdb": "sample_examples/receptors/4COX_receptor.pdb",
+    "ligand_pdb": "sample_examples/ligands/4COX_IMN_bound_reference.pdb",
+    "pocket_center": [
+      24.849,
+      22.295,
+      15.126
+    ],
+    "pocket_radius": 10.0,
+    "num_receptor_atoms": 17892,
+    "num_ligand_atoms": 25
+  },
+  {
+    "target_id": "1M17",
+    "target_name": "EGFR Kinase",
+    "ligand_code": "AQ4",
+    "ligand_name": "Erlotinib",
+    "receptor_pdb": "sample_examples/receptors/1M17_receptor.pdb",
+    "ligand_pdb": "sample_examples/ligands/1M17_AQ4_bound_reference.pdb",
+    "pocket_center": [
+      22.014,
+      0.253,
+      52.794
+    ],
+    "pocket_radius": 10.0,
+    "num_receptor_atoms": 2511,
+    "num_ligand_atoms": 29
+  },
+  {
+    "target_id": "1FKB",
+    "target_name": "FKBP12 Immunophilin",
+    "ligand_code": "RAP",
+    "ligand_name": "Rapamycin",
+    "receptor_pdb": "sample_examples/receptors/1FKB_receptor.pdb",
+    "ligand_pdb": "sample_examples/ligands/1FKB_RAP_bound_reference.pdb",
+    "pocket_center": [
+      3.109,
+      12.167,
+      13.353
+    ],
+    "pocket_radius": 10.0,
+    "num_receptor_atoms": 1028,
+    "num_ligand_atoms": 68
+  },
+  {
+    "target_id": "6LU7",
+    "target_name": "SARS-CoV-2 Main Protease (Mpro)",
+    "ligand_code": "02J",
+    "ligand_name": "N3 Peptidomimetic",
+    "receptor_pdb": "sample_examples/receptors/6LU7_receptor.pdb",
+    "ligand_pdb": "sample_examples/ligands/6LU7_02J_bound_reference.pdb",
+    "pocket_center": [
+      -10.464,
+      4.104,
+      73.01
+    ],
+    "pocket_radius": 10.0,
+    "num_receptor_atoms": 2387,
+    "num_ligand_atoms": 8
+  }
+]
