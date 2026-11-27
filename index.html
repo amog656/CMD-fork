@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>SIRIUS</title>
+  <link rel="stylesheet" href="style.css?v=17">
+</head>
+<body data-r="home">
+  <h1 id="ttl">SIRIUS</h1>
+  <canvas id="c"></canvas>
+  <header>
+    <a class="logo" data-go="home">SIRIUS</a>
+    <nav>
+      <a data-go="input">Design run</a>
+      <a data-go="cand">Candidates</a>
+      <a data-go="view">Structure viewer</a>
+    </nav>
+  </header>
+
+  <section id="home" class="pg on">
+    <div class="sx s0">
+      <p class="hs l">Apo protein in.<br>Ranked ligand candidates out.</p>
+      <p class="hs r">Drag to rotate.<br>Scroll to design.</p>
+      <button id="sc" type="button"><span>Scroll</span><i></i></button>
+    </div>
+    <div class="sx s1"><p class="kk">Structure &amp; Burial</p><h2 class="hl"><span>Read the</span><span>fold.</span></h2><p class="bd">Every residue becomes a point in space, sized by neighbour burial. Drag to inspect, or scroll to sample states and generate candidates.</p></div>
+    <div class="sx s2"><p class="kk">Generation</p><h2 class="hl"><span>Start</span><span>a run.</span></h2><button class="cta big" data-go="input" type="button">Set up a run</button><p class="bd">Bring a PDB file and a ligand to rank candidates.</p></div>
+  </section>
+
+  <section id="input" class="pg">
+    <div class="fm">
+      <h2 class="d">Set up<br>a run</h2>
+      <div class="f">
+        <label for="pid">Protein structure, PDB</label>
+        <div class="row">
+          <input id="pid" placeholder="PDB ID, such as 4EY7" maxlength="4" autocomplete="off">
+          <label class="fb">Upload file<input type="file" id="pf" accept=".pdb,.ent" hidden></label>
+        </div>
+        <small id="pfn"></small>
+      </div>
+      <div class="f">
+        <label for="lig">Reference ligand</label>
+        <div class="row">
+          <input id="lig" placeholder="SMILES string" autocomplete="off">
+          <label class="fb">Upload SDF<input type="file" id="lf" accept=".sdf,.mol" hidden></label>
+        </div>
+        <small id="lfn"></small>
+      </div>
+      <div class="f">
+        <label>Candidates to return</label>
+        <div class="ks" id="ks">
+          <button data-k="6">6</button>
+          <button class="on" data-k="12">12</button>
+          <button data-k="18">18</button>
+        </div>
+      </div>
+      <p id="err"></p>
+      <button id="go" class="cta">Generate candidates</button>
+    </div>
+  </section>
+
+  <section id="run" class="pg">
+    <ol id="lg" aria-hidden="true"></ol>
+    <div class="rt">
+      <div class="rt-hd">
+        <h2 id="rs" class="d"></h2>
+        <div id="pc" aria-hidden="true">000%</div>
+      </div>
+      <p id="rp" role="status"></p>
+      <div class="bar"><i id="rb"></i></div>
+      <ul id="rl">
+        <li>Sample</li><li>Cluster</li><li>Pharmacophores</li><li>Generate</li><li>Filter</li>
+      </ul>
+      <button id="skip" type="button">Skip to results</button>
+    </div>
+  </section>
+
+  <section id="cand" class="pg">
+    <div class="ch">
+      <h2 class="d" id="ct"></h2>
+      <p>Ranked by drug-likeness. Scores are model predictions. Hover to preview, click to analyze.</p>
+    </div>
+    <div id="tb">
+      <div class="rw hd">
+        <span>Candidate</span>
+        <span></span>
+        <span>MW</span>
+        <span>QED</span>
+        <span>SAS</span>
+        <span>LogP</span>
+        <span>Dock</span>
+      </div>
+      <div id="grid"></div>
+    </div>
+  </section>
+
+  <section id="ana" class="pg">
+    <div class="pn" id="ap"></div>
+  </section>
+
+  <section id="view" class="pg">
+    <div class="pn" id="vp">
+      <h2 class="d">Structure<br>viewer</h2>
+      <div class="grp"><span>View</span>
+        <div class="sw" id="vm_mode">
+          <button data-m="prot" class="on">Protein (PDB)</button><button data-m="lig">Ligand (SDF)</button>
+        </div>
+      </div>
+      <div class="grp">
+        <span>Load</span>
+        <div class="fr">
+          <input id="vid" placeholder="PDB ID, e.g. 7ONS" maxlength="4" autocomplete="off" aria-label="PDB ID">
+          <button class="fb" id="vg" type="button">Fetch</button>
+        </div>
+        <label class="fb">Open PDB or SDF file
+          <input type="file" id="vf" accept=".pdb,.ent,.sdf,.mol" hidden>
+        </label>
+      </div>
+      <div class="grp"><span>Style</span>
+        <div class="sw" id="vs">
+          <button data-s="cartoon" class="on">Cartoon</button><button data-s="lines">Lines</button><button data-s="spheres">Spheres</button><button data-s="surface">Surface</button>
+        </div>
+      </div>
+      <div class="grp"><span>Colour</span>
+        <div class="sw" id="vc">
+          <button data-c="ss" class="on">Structure</button><button data-c="chain">Chain</button><button data-c="res">Residue</button><button data-c="bfac">B-factor</button><button data-c="rainbow">N to C</button>
+        </div>
+      </div>
+      <div class="grp"><span>Show</span>
+        <div class="sw" id="vk">
+          <button data-k="lig" class="on" aria-pressed="true">Ligand</button><button data-k="pocket" aria-pressed="false">Pocket</button><button data-k="spin" class="on" aria-pressed="true">Spin</button><button data-k="focus">Focus ligand</button>
+        </div>
+      </div>
+      <p id="vi" role="status">Loading structure...</p>
+    </div>
+    <div class="pn" id="sq" aria-label="Sequence"></div>
+  </section>
+
+  <div id="tip" role="status" aria-live="polite"></div>
+  <div id="wipe"><b id="wl" class="d"></b></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="app.js?v=17"></script>
+</body>
+</html>
