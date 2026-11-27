@@ -39,7 +39,7 @@ Launch the front end from the project root with the `diffphar-fm` environment:
 & "C:\Users\hanut sai\miniconda3\envs\diffphar-fm\python.exe" -m streamlit run app.py
 ```
 
-In the app, select a built-in protein–ligand example, keep the defaults (2 protein states, 6 molecules, Vina exhaustiveness 1), and click **Generate and dock molecules**. Pocket coordinates and radius are prefilled. Detailed paths and run controls are inside **Advanced settings (optional)**. The real five-stage pipeline runs on the spot:
+In the app, upload any complete protein–ligand complex from `sample_examples/complexes/`, keep the defaults (2 protein states, 6 molecules, Vina exhaustiveness 1), and click **Generate and dock molecules**. The app extracts the protein and calculates the pocket center from its bound ligand. Detailed run controls are inside **Advanced settings (optional)**. The real five-stage pipeline runs on the spot:
 
 1. aSAM generates the conformational ensemble.
 2. PharmFlow samples 3D pharmacophores.
@@ -80,7 +80,7 @@ The CLI resolves the project checkpoint, GCPG Python, Meeko Python, and Vina aut
 
 ### Try the front end with sample protein pockets
 
-Install the front-end dependency (`pip install streamlit`) and launch `streamlit run app.py`. In **Choose a structure**, select one of the built-in FKBP12–rapamycin, EGFR–erlotinib, or p38α kinase–L12 examples. The app fills in the prepared receptor and ligand-derived pocket center. See [sample_examples/README.md](sample_examples/README.md) for data sources, files, and centers. The five pipeline stages still require the model checkpoints and executables configured in the app.
+Install the front-end dependency (`pip install streamlit`) and launch `streamlit run app.py`. Upload any full `.pdb` or `.cif` complex from [sample_examples/complexes](sample_examples/complexes/). The app identifies the bound ligand, extracts the protein receptor, and calculates the pocket center automatically. See [sample_examples/README.md](sample_examples/README.md) for the list of examples and sources. The five pipeline stages still require the model checkpoints and executables configured in the app.
 
 ```bash
 # Install dependencies
@@ -219,7 +219,7 @@ The generated report separates checks that ran from gates marked `NOT EVALUATED`
 
 ## Front end
 
-The Streamlit app provides a form for uploading a protein PDB, entering a known pocket center, choosing model environments and run size, then viewing the report and downloading generated files. Start it from the PharmFlow environment so the backend uses the correct Python stack:
+The Streamlit app accepts a complete protein-ligand `.pdb` or `.cif` complex. It extracts a protein chain and finds the pocket center from the bound ligand, so no pocket coordinates are needed. Choose model environments and run size only if you want to change the defaults. Start it from the PharmFlow environment:
 
 ```powershell
 & 'C:\Users\hanut sai\miniconda3\envs\diffphar-fm\python.exe' -m streamlit run app.py

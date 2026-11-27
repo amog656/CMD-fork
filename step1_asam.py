@@ -139,7 +139,12 @@ class ASAMEnsembleGenerator:
         if not generated_ca or len(generated_ca) != len(reference_ca) or generated_sequence != reference_sequence:
             raise RuntimeError('Could not establish matching C-alpha atoms for aSAM structure alignment.')
         trajectory.superpose(reference, frame=0, atom_indices=generated_ca, ref_atom_indices=reference_ca)
-        reference_structure = self.parser.get_structure('reference', str(receptor_path.resolve()))
+        # aSAM can rebuild atoms missing from an experimental crystal model
+        # (for example, an unresolved lysine side chain). Use its returned
+        # topology as the output structure so every generated atom has a slot
+        # when writing the sampled coordinates, while retaining the existing
+        # sequence check against the uploaded receptor above.
+        reference_structure = self.parser.get_structure('reference', str(top_path.resolve()))
         reference_residues = list(reference_structure[0].get_residues())
         generated_residues = list(trajectory.topology.residues)
         if len(reference_residues) != len(generated_residues):

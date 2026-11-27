@@ -1,0 +1,350 @@
+[
+  {
+    "pdb": "1FKB",
+    "component_id": "RAP",
+    "target": "FKBP12",
+    "ligand": "rapamycin",
+    "resolution_A": 1.7,
+    "center_A": [
+      3.109,
+      12.167,
+      13.353
+    ],
+    "pocket_radius_A": 10.0,
+    "complex_file": "sample_examples/complexes/1FKB.pdb"
+  },
+  {
+    "pdb": "1M17",
+    "component_id": "AQ4",
+    "target": "EGFR kinase",
+    "ligand": "erlotinib",
+    "resolution_A": 2.6,
+    "center_A": [
+      22.014,
+      0.253,
+      52.794
+    ],
+    "pocket_radius_A": 10.0,
+    "complex_file": "sample_examples/complexes/1M17.pdb"
+  },
+  {
+    "pdb": "1W84",
+    "component_id": "L12",
+    "target": "p38Î± MAP kinase",
+    "ligand": "inhibitor L12",
+    "resolution_A": 2.2,
+    "center_A": [
+      3.884,
+      11.349,
+      30.43
+    ],
+    "pocket_radius_A": 10.0,
+    "complex_file": "sample_examples/complexes/1W84.pdb"
+  },
+  {
+    "pdb": "29IA",
+    "component_id": "A1J2Q",
+    "target": "SIRT2",
+    "ligand": "KK8 inhibitor",
+    "resolution_A": 1.4,
+    "center_A": [
+      10.971,
+      9.519,
+      19.418
+    ],
+    "pocket_radius_A": 10.0,
+    "protein_chain": "A",
+    "protein_residues": 291,
+    "protein_atoms": 2323,
+    "ligand_heavy_atoms": 41,
+    "complex_file": "sample_examples/complexes/29IA.cif"
+  },
+  {
+    "pdb": "29ID",
+    "component_id": "A1J2O",
+    "target": "SIRT2",
+    "ligand": "KKibu inhibitor",
+    "resolution_A": 1.95,
+    "center_A": [
+      10.943,
+      8.085,
+      19.883
+    ],
+    "pocket_radius_A": 10.0,
+    "protein_chain": "A",
+    "protein_residues": 293,
+    "protein_atoms": 2333,
+    "ligand_heavy_atoms": 36,
+    "complex_file": "sample_examples/complexes/29ID.cif"
+  },
+  {
+    "pdb": "31FJ",
+    "component_id": "A1J9A",
+    "target": "Carbonic anhydrase II",
+    "ligand": "A1J9A inhibitor",
+    "resolution_A": 1.11,
+    "center_A": [
+      17.81,
+      6.932,
+      14.732
+    ],
+    "pocket_radius_A": 10.0,
+    "protein_chain": "A",
+    "protein_residues": 257,
+    "protein_atoms": 2043,
+    "ligand_heavy_atoms": 21,
+    "complex_file": "sample_examples/complexes/31FJ.cif"
+  },
+  {
+    "pdb": "31FK",
+    "component_id": "A1J9B",
+    "target": "Carbonic anhydrase II",
+    "ligand": "A1J9B inhibitor",
+    "resolution_A": 1.11,
+    "center_A": [
+      17.576,
+      7.063,
+      14.223
+    ],
+    "pocket_radius_A": 10.0,
+    "protein_chain": "A",
+    "protein_residues": 257,
+    "protein_atoms": 2049,
+    "ligand_heavy_atoms": 23,
+    "complex_file": "sample_examples/complexes/31FK.cif"
+  },
+  {
+    "pdb": "31FL",
+    "component_id": "A1J88",
+    "target": "Carbonic anhydrase II",
+    "ligand": "A1J88 inhibitor",
+    "resolution_A": 1.11,
+    "center_A": [
+      17.795,
+      6.971,
+      14.336
+    ],
+    "pocket_radius_A": 10.0,
+    "protein_chain": "A",
+    "protein_residues": 257,
+    "protein_atoms": 2049,
+    "ligand_heavy_atoms": 24,
+    "complex_file": "sample_examples/complexes/31FL.cif"
+  },
+  {
+    "pdb": "31FM",
+    "component_id": "A1J89",
+    "target": "Carbonic anhydrase II",
+    "ligand": "A1J89 inhibitor",
+    "resolution_A": 1.35,
+    "center_A": [
+      17.084,
+      7.585,
+      13.894
+    ],
+    "pocket_radius_A": 10.0,
+    "protein_chain": "A",
+    "protein_residues": 257,
+    "protein_atoms": 2045,
+    "ligand_heavy_atoms": 27,
+    "complex_file": "sample_examples/complexes/31FM.cif"
+  },
+  {
+    "pdb": "31HW",
+    "component_id": "A1J9R",
+    "target": "Monoacylglycerol lipase",
+    "ligand": "Compound 2.1",
+    "resolution_A": 1.4,
+    "center_A": [
+      37.845,
+      21.029,
+      -5.422
+    ],
+    "pocket_radius_A": 10.0,
+    "protein_chain": "A",
+    "protein_residues": 295,
+    "protein_atoms": 2283,
+    "ligand_heavy_atoms": 23,
+    "complex_file": "sample_examples/complexes/31HW.cif"
+  },
+  {
+    "pdb": "31HZ",
+    "component_id": "A1J9S",
+    "target": "Monoacylglycerol lipase",
+    "ligand": "Compound 2.12",
+    "resolution_A": 1.4,
+    "center_A": [
+      39.223,
+      21.578,
+      -5.548
+    ],
+    "pocket_radius_A": 10.0,
+    "protein_chain": "A",
+    "protein_residues": 295,
+    "protein_atoms": 2283,
+    "ligand_heavy_atoms": 29,
+    "complex_file": "sample_examples/complexes/31HZ.cif"
+  },
+  {
+    "pdb": "31JL",
+    "component_id": "A1J9T",
+    "target": "Monoacylglycerol lipase",
+    "ligand": "Compound 2.14",
+    "resolution_A": 1.19,
+    "center_A": [
+      -5.378,
+      20.785,
+      -5.505
+    ],
+    "pocket_radius_A": 10.0,
+    "protein_chain": "A",
+    "protein_residues": 290,
+    "protein_atoms": 2244,
+    "ligand_heavy_atoms": 29,
+    "complex_file": "sample_examples/complexes/31JL.cif"
+  },
+  {
+    "pdb": "35XD",
+    "component_id": "A1DIJ",
+    "target": "DCN1",
+    "ligand": "Compound A1DIJ",
+    "resolution_A": 2.05,
+    "center_A": [
+      15.237,
+      -10.342,
+      -8.879
+    ],
+    "pocket_radius_A": 10.0,
+    "protein_chain": "A",
+    "protein_residues": 370,
+    "protein_atoms": 2958,
+    "ligand_heavy_atoms": 30,
+    "complex_file": "sample_examples/complexes/35XD.cif"
+  },
+  {
+    "pdb": "35XH",
+    "component_id": "A1DIM",
+    "target": "DCN1",
+    "ligand": "Compound A1DIM",
+    "resolution_A": 1.25,
+    "center_A": [
+      14.271,
+      -9.406,
+      -9.584
+    ],
+    "pocket_radius_A": 10.0,
+    "protein_chain": "A",
+    "protein_residues": 363,
+    "protein_atoms": 2909,
+    "ligand_heavy_atoms": 33,
+    "complex_file": "sample_examples/complexes/35XH.cif"
+  },
+  {
+    "pdb": "35XL",
+    "component_id": "A1DIN",
+    "target": "DCN1",
+    "ligand": "Compound A1DIN",
+    "resolution_A": 1.25,
+    "center_A": [
+      -6.859,
+      10.401,
+      19.575
+    ],
+    "pocket_radius_A": 10.0,
+    "protein_chain": "A",
+    "protein_residues": 370,
+    "protein_atoms": 2960,
+    "ligand_heavy_atoms": 30,
+    "complex_file": "sample_examples/complexes/35XL.cif"
+  },
+  {
+    "pdb": "9T9A",
+    "component_id": "A1JUL",
+    "target": "Carbonic anhydrase II",
+    "ligand": "A1JUL inhibitor",
+    "resolution_A": 1.32,
+    "center_A": [
+      -3.282,
+      5.45,
+      14.203
+    ],
+    "pocket_radius_A": 10.0,
+    "protein_chain": "AAA",
+    "protein_residues": 258,
+    "protein_atoms": 2059,
+    "ligand_heavy_atoms": 26,
+    "complex_file": "sample_examples/complexes/9T9A.cif"
+  },
+  {
+    "pdb": "9T9B",
+    "component_id": "A1JUK",
+    "target": "Carbonic anhydrase II",
+    "ligand": "A1JUK inhibitor",
+    "resolution_A": 1.4,
+    "center_A": [
+      -2.955,
+      4.32,
+      13.364
+    ],
+    "pocket_radius_A": 10.0,
+    "protein_chain": "AAA",
+    "protein_residues": 258,
+    "protein_atoms": 2059,
+    "ligand_heavy_atoms": 27,
+    "complex_file": "sample_examples/complexes/9T9B.cif"
+  },
+  {
+    "pdb": "9TWE",
+    "component_id": "6U9",
+    "target": "Pregnane X receptor",
+    "ligand": "S-nimodipine",
+    "resolution_A": 2.4,
+    "center_A": [
+      10.692,
+      -15.066,
+      -1.337
+    ],
+    "pocket_radius_A": 10.0,
+    "protein_chain": "A",
+    "protein_residues": 267,
+    "protein_atoms": 2072,
+    "ligand_heavy_atoms": 30,
+    "complex_file": "sample_examples/complexes/9TWE.cif"
+  },
+  {
+    "pdb": "9XQP",
+    "component_id": "A1E09",
+    "target": "FGFR4 kinase",
+    "ligand": "F-30 inhibitor",
+    "resolution_A": 2.427,
+    "center_A": [
+      -43.339,
+      -1.241,
+      200.665
+    ],
+    "pocket_radius_A": 10.0,
+    "protein_chain": "A",
+    "protein_residues": 294,
+    "protein_atoms": 2313,
+    "ligand_heavy_atoms": 32,
+    "complex_file": "sample_examples/complexes/9XQP.cif"
+  },
+  {
+    "pdb": "9XRK",
+    "component_id": "O5F",
+    "target": "SARS-CoV main protease",
+    "ligand": "CDD1845 inhibitor",
+    "resolution_A": 1.94,
+    "center_A": [
+      121.979,
+      -2.819,
+      23.61
+    ],
+    "pocket_radius_A": 10.0,
+    "protein_chain": "A",
+    "protein_residues": 300,
+    "protein_atoms": 2326,
+    "ligand_heavy_atoms": 41,
+    "complex_file": "sample_examples/complexes/9XRK.cif"
+  }
+]

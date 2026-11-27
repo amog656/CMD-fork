@@ -9,59 +9,16 @@ from pathlib import Path
 from typing import Sequence
 
 import streamlit as st
+from complex_input import extract_complex
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 DEFAULT_PHARMFLOW_CKPT = PROJECT_ROOT / "checkpoints_pharmflow" / "best_model_epoch_46.ckpt"
 DEFAULT_GCPG_PYTHON = Path(r"C:\Users\hanut sai\miniconda3\envs\gcpg\python.exe")
 DEFAULT_MEEKO_PYTHON = Path(r"C:\Users\hanut sai\miniconda3\envs\diff_phar\python.exe")
 DEFAULT_VINA = PROJECT_ROOT / "vina.exe"
-STANDARD_AA = {
-    "ALA", "ARG", "ASN", "ASP", "CYS", "GLN", "GLU", "GLY", "HIS", "ILE",
-    "LEU", "LYS", "MET", "PHE", "PRO", "SER", "THR", "TRP", "TYR", "VAL",
-}
-
-
 def _resolved_file(value: str) -> Path:
     path = Path(value).expanduser()
     return path if path.is_absolute() else PROJECT_ROOT / path
-
-
-def _protein_receptor_bytes(pdb_bytes: bytes, filename: str) -> bytes:
-    """Keep one standard amino-acid chain and remove ligands/water from a PDB upload."""
-    lines = pdb_bytes.decode("utf-8", errors="replace").splitlines()
-    chains = {
-        line[21:22] or " "
-        for line in lines
-        if line.startswith("ATOM  ") and line[17:20].strip() in STANDARD_AA
-    }
-    if not chains:
-        raise ValueError(
-            f"`{filename}` has no standard protein residues (ATOM records). It looks like a ligand-only file. "
-            "Choose a built-in protein example, or upload the receptor protein PDB; files ending in "
-            "`_bound_reference.pdb` contain only the ligand."
-        )
-    if "A" in chains:
-        chain = "A"
-    elif len(chains) == 1:
-        chain = next(iter(chains))
-    else:
-        raise ValueError(
-            "This PDB has multiple protein chains and no chain A. aSAM expects a single chain; "
-            "upload a receptor PDB with the intended chain labeled A."
-        )
-
-    protein_lines = []
-    for line in lines:
-        if not line.startswith("ATOM  ") or line[17:20].strip() not in STANDARD_AA:
-            continue
-        if (line[21:22] or " ") != chain:
-            continue
-        if line[76:78].strip().upper() in {"H", "D"}:
-            continue
-        protein_lines.append(line[:21] + "A" + line[22:])
-    if not protein_lines:
-        raise ValueError("No protein atoms remained after filtering the uploaded PDB.")
-    return ("\n".join([*protein_lines, "TER", "END", ""])).encode("utf-8")
 
 
 def _pipeline_command(
@@ -127,85 +84,18 @@ def _run_pipeline(command: list[str], output_dir: Path) -> tuple[int, str]:
 
 st.set_page_config(page_title="DiffPhar", page_icon="🧬", layout="wide")
 st.title("DiffPhar molecule generator")
-st.caption("Choose a protein pocket, generate candidate molecules, and review docking results.")
-st.caption("For custom input, upload a protein receptor PDB. Bound ligand reference files are not receptor structures.")
+st.caption("Upload one complete protein-ligand complex. The app extracts the protein and finds the pocket center from its bound ligand.")
 
 st.warning(
     "Generated molecules and Vina scores are computational predictions. "
     "They do not establish that a molecule is an effective or safe drug."
 )
 
-SAMPLE_EXAMPLES = {
-    "Custom protein (upload PDB)": None,
-    "FKBP12 · rapamycin (1FKB)": {
-        "pdb": "sample_examples/receptors/1FKB_receptor.pdb",
-        "center": (3.109, 12.167, 13.353),
-        "ligand": "Rapamycin (RAP)",
-        "source": "RCSB PDB 1FKB; center is the bound ligand heavy-atom centroid",
-    },
-    "EGFR kinase · erlotinib (1M17)": {
-        "pdb": "sample_examples/receptors/1M17_receptor.pdb",
-        "center": (22.014, 0.253, 52.794),
-        "ligand": "Erlotinib (AQ4)",
-        "source": "RCSB PDB 1M17; center is the bound ligand heavy-atom centroid",
-    },
-    "Abl kinase · imatinib / Gleevec (2HYY)": {
-        "pdb": "sample_examples/receptors/2HYY_receptor.pdb",
-        "center": (14.251, 15.283, 17.632),
-        "ligand": "Imatinib (STI)",
-        "source": "RCSB PDB 2HYY; center is the bound ligand heavy-atom centroid",
-    },
-    "HIV-1 protease · flap inhibitor (1HVR)": {
-        "pdb": "sample_examples/receptors/1HVR_receptor.pdb",
-        "center": (-9.192, 15.906, 27.946),
-        "ligand": "XK263 inhibitor (XK2)",
-        "source": "RCSB PDB 1HVR; center is the bound ligand heavy-atom centroid",
-    },
-    "Hsp90 chaperone · purine inhibitor (1UY6)": {
-        "pdb": "sample_examples/receptors/1UY6_receptor.pdb",
-        "center": (3.400, 11.180, 24.857),
-        "ligand": "PU3 inhibitor (PU3)",
-        "source": "RCSB PDB 1UY6; center is the bound ligand heavy-atom centroid",
-    },
-    "COX-2 synthase · indomethacin (4COX)": {
-        "pdb": "sample_examples/receptors/4COX_receptor.pdb",
-        "center": (24.849, 22.295, 15.126),
-        "ligand": "Indomethacin (IMN)",
-        "source": "RCSB PDB 4COX; center is the bound ligand heavy-atom centroid",
-    },
-}
-
 st.subheader("1. Protein and pocket")
-sample_name = st.selectbox("Choose a structure", list(SAMPLE_EXAMPLES), index=1)
-sample = SAMPLE_EXAMPLES[sample_name]
-if sample_name.startswith("EGFR"):
-    st.warning("EGFR (1M17) can fail Gate Q in multi-state mode. The pipeline will retry and may fall back to 1 state; use FKBP12 (1FKB) for a true multi-state run.")
-
 with st.form("pipeline_form"):
-    pdb_upload = None
-    if sample is None:
-        pdb_upload = st.file_uploader("Protein structure (.pdb)", type=["pdb"])
-        initial_center = (0.0, 0.0, 0.0)
-        center_source = "User supplied; verify from a bound ligand or known binding site"
-        pocket_cols = st.columns(4)
-        with pocket_cols[0]:
-            center_x = st.number_input("Pocket center X (Å)", value=initial_center[0], format="%.3f", key=f"center_x_{sample_name}")
-        with pocket_cols[1]:
-            center_y = st.number_input("Pocket center Y (Å)", value=initial_center[1], format="%.3f", key=f"center_y_{sample_name}")
-        with pocket_cols[2]:
-            center_z = st.number_input("Pocket center Z (Å)", value=initial_center[2], format="%.3f", key=f"center_z_{sample_name}")
-        with pocket_cols[3]:
-            pocket_radius = st.number_input("Pocket radius (Å)", min_value=3.0, max_value=25.0, value=10.0, step=1.0)
-        pocket_note = st.text_input("Pocket center source", value=center_source)
-        st.info("Enter the pocket center in the uploaded PDB's coordinate frame. The center of a known bound ligand is a useful starting point.")
-    else:
-        initial_center = sample["center"]
-        center_source = sample["source"]
-        center_x, center_y, center_z = initial_center
-        pocket_radius = 10.0
-        pocket_note = center_source
-        st.info(f"Ready-to-run built-in example: {sample['ligand']}. The pocket center and receptor are filled in automatically.")
-        st.caption(f"Pocket center: ({center_x:.3f}, {center_y:.3f}, {center_z:.3f}) Å · radius: {pocket_radius:.1f} Å")
+    complex_upload = st.file_uploader("Protein-ligand complex (.pdb, .cif, or .mmcif)", type=["pdb", "ent", "cif", "mmcif"])
+    pocket_radius = 10.0
+    st.info("Upload a complete complex with a small molecule bound. The ligand is used to locate the pocket automatically; you do not enter coordinates.")
 
     with st.expander("Advanced settings (optional)"):
         st.caption("Defaults are prefilled. Change these only if you need a different run size or installed model path.")
@@ -230,7 +120,7 @@ with st.form("pipeline_form"):
         vina_text = st.text_input("AutoDock Vina executable", value=str(DEFAULT_VINA))
         allow_bad_residues = st.checkbox(
             "Allow Meeko to omit unmatched receptor residues",
-            value=sample is not None,
+            value=True,
             help="Prepared examples may include residues without a Meeko template. Omitted residues can affect docking; inspect the run output before interpreting scores.",
         )
         st.caption("Default quick run: 2 protein states, 6 molecules, Vina exhaustiveness 1.")
@@ -238,14 +128,11 @@ with st.form("pipeline_form"):
     submitted = st.form_submit_button("Generate and dock molecules", type="primary", use_container_width=True)
 
 if submitted:
-    if sample is None and pdb_upload is None:
-        st.error("Upload a protein PDB first.")
+    if complex_upload is None:
+        st.error("Upload a complete protein-ligand complex first.")
     else:
         try:
-            uploaded_receptor = (
-                _protein_receptor_bytes(pdb_upload.getvalue(), pdb_upload.name)
-                if sample is None and pdb_upload is not None else None
-            )
+            uploaded_receptor, center, ligand_id = extract_complex(complex_upload.getvalue(), complex_upload.name)
         except ValueError as exc:
             st.error(str(exc))
             st.stop()
@@ -264,22 +151,15 @@ if submitted:
             input_dir = output_dir / "input"
             input_dir.mkdir(parents=True, exist_ok=False)
             pdb_path = input_dir / "receptor.pdb"
-            if sample is None:
-                pdb_path.write_bytes(uploaded_receptor)
-            else:
-                sample_pdb = _resolved_file(sample["pdb"])
-                if not sample_pdb.is_file():
-                    st.error(f"Built-in sample is missing: `{sample_pdb}`")
-                    st.stop()
-                try:
-                    pdb_path.write_bytes(_protein_receptor_bytes(sample_pdb.read_bytes(), sample_pdb.name))
-                except ValueError as exc:
-                    st.error(str(exc))
-                    st.stop()
+            original_name = Path(complex_upload.name).name
+            (input_dir / original_name).write_bytes(complex_upload.getvalue())
+            pdb_path.write_bytes(uploaded_receptor)
+            pocket_note = f"Automatically detected bound ligand ({ligand_id}) in uploaded complex {original_name}; heavy-atom centroid"
+            st.success(f"Found {ligand_id}. Pocket center: ({center[0]:.3f}, {center[1]:.3f}, {center[2]:.3f}) Å; radius {pocket_radius:.1f} Å.")
             command = _pipeline_command(
                 pdb_path=pdb_path,
                 out_dir=output_dir,
-                center=(center_x, center_y, center_z),
+                center=center,
                 radius=pocket_radius,
                 pocket_note=pocket_note,
                 checkpoint=checkpoint,
