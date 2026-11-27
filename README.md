@@ -31,9 +31,23 @@ DiffPhar/
 └── get_phar/                   # Pharmacophore extraction utilities
 ```
 
-## Live run (ready to run)
+## SIRIUS browser frontend
 
-Launch the front end from the project root with the `diffphar-fm` environment:
+The SIRIUS interface from the `sirius-frontend` branch is connected to the local CMD-Gen pipeline. It accepts one complete protein-ligand complex and detects the bound ligand and pocket center automatically. Generated candidates, molecular properties, Vina scores, report, and SDF download come from the real run.
+
+On this Windows setup, launch `start.bat` from File Explorer, or run:
+
+```powershell
+& "C:\Users\hanut sai\miniconda3\envs\diffphar-fm\python.exe" sirius_server.py
+```
+
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000). Upload a full complex from `sample_examples/complexes/`, choose the molecule count, and start the run. Defaults are 2 aSAM states, 6 generated molecules, Vina exhaustiveness 1, and CUDA. Advanced settings can change those values. Keep the server window open; pipeline progress and failures appear in the browser.
+
+The SIRIUS server and pipeline must run in `diffphar-fm`. The app retains files under `pipeline_runs/`. Candidate cards offer the generated 3D SDF and pipeline report for download. SIRIUS runs locally and binds only to `127.0.0.1`.
+
+## Streamlit interface
+
+The original Streamlit interface remains available from the project root with the `diffphar-fm` environment:
 
 ```powershell
 & "C:\Users\hanut sai\miniconda3\envs\diffphar-fm\python.exe" -m streamlit run app.py
